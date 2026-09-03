@@ -278,14 +278,12 @@ export default function App() {
   });
 
   return (
-    <div className="min-h-screen bg-[#FAF9F5] text-[#1C1A17] dark:bg-[#131211] dark:text-[#EBE7DF] font-sans flex flex-col justify-between transition-colors duration-300 selection:bg-amber-100 selection:text-amber-900" id="editorial_app_main">
+    <div className="min-h-screen bg-stone-50 text-stone-900 dark:bg-[#111110] dark:text-[#ECEAE4] font-sans flex flex-col transition-colors duration-200">
       <div>
-        
-        {/* Sticky top headers */}
-        <Navbar 
-          currentTab={currentTab} 
-          setCurrentTab={setCurrentTab} 
-          activeBidCount={activeBidCount} 
+        <Navbar
+          currentTab={currentTab}
+          setCurrentTab={setCurrentTab}
+          activeBidCount={activeBidCount}
           wishlistCount={wishlist.length}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
@@ -299,105 +297,58 @@ export default function App() {
           onToggleDarkMode={handleToggleDarkMode}
         />
 
-        {isDemoMode && isGuest && (
-          <div className="border-b border-stone-200 bg-stone-50 dark:bg-stone-900 dark:border-stone-800 text-stone-600 dark:text-stone-400">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex items-center justify-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em]">
-              <User className="w-3 h-3" />
-              Browsing as guest — sign in to save items and checkout
-            </div>
-          </div>
-        )}
-
-        {/* Hero banner — visible only on the main browse feed */}
-        {currentTab === "browse" && !selectedBoothId && (
-          <section className="bg-[#1C1A17] text-[#FAF9F5] border-b border-stone-800" id="editorial_hero_banner">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 min-h-[420px]">
-
-                {/* Left: Copy */}
-                <div className="flex flex-col justify-center py-16 sm:py-20 space-y-6 lg:pr-16">
-                  <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-amber-400 font-bold">
-                    Authenticated Vintage Marketplace
-                  </span>
-                  <h1 className="font-serif text-4xl sm:text-5xl font-bold tracking-tight leading-[1.1] italic">
-                    Rare pieces. <br />Real provenance.
-                  </h1>
-                  <p className="text-stone-400 text-sm leading-relaxed max-w-md">
-                    Every garment is sourced, measured, and photographed by independent curators across London, Tokyo, New York, and Milan. Bid live or buy outright — no fast fashion, no replicas.
-                  </p>
-
-                  <div className="flex flex-wrap gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setCurrentTab("browse")}
-                      className="px-5 py-2.5 bg-[#F68B1E] hover:bg-amber-500 text-white font-mono text-xs font-bold uppercase tracking-wider rounded-lg transition-colors flex items-center gap-2"
-                    >
-                      <ShoppingBag className="w-4 h-4" />
-                      Browse Collection
-                    </button>
-                    {isGuest && (
-                      <button
-                        type="button"
-                        onClick={() => setIsAuthModalOpen(true)}
-                        className="px-5 py-2.5 border border-stone-600 hover:border-stone-400 text-stone-300 hover:text-white font-mono text-xs font-bold uppercase tracking-wider rounded-lg transition-colors flex items-center gap-2"
-                      >
-                        <User className="w-4 h-4" />
-                        Create Account
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Trust signals */}
-                  <div className="flex flex-wrap gap-x-6 gap-y-2 pt-2 text-[11px] font-mono text-stone-500">
-                    <span className="flex items-center gap-1.5">
-                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-                      Provenance verified
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                      Flat measurements on every listing
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <Shield className="w-3.5 h-3.5 text-blue-400" />
-                      Secure checkout via Stripe
-                    </span>
-                  </div>
-                </div>
-
-                {/* Right: Stats panel */}
-                <div className="hidden lg:flex flex-col justify-center border-l border-stone-800 pl-16 py-16 space-y-8">
-                  <div className="grid grid-cols-2 gap-6">
-                    {[
-                      { value: "500+", label: "Archive pieces" },
-                      { value: "4", label: "Global sourcing cities" },
-                      { value: "Live", label: "Real-time bidding" },
-                      { value: "100%", label: "Physical origin" },
-                    ].map(({ value, label }) => (
-                      <div key={label} className="space-y-1">
-                        <div className="font-serif text-3xl font-bold text-amber-400">{value}</div>
-                        <div className="font-mono text-[10px] uppercase tracking-wider text-stone-500">{label}</div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="border-t border-stone-800 pt-6 space-y-3">
-                    <p className="font-mono text-[10px] uppercase tracking-wider text-stone-500">Sourced from</p>
-                    <div className="flex flex-wrap gap-2 text-[11px] font-mono text-stone-300">
-                      {["Portobello Road, London", "Shimokitazawa, Tokyo", "Brooklyn Flea, NY", "Navigli, Milan"].map(loc => (
-                        <span key={loc} className="px-2.5 py-1 border border-stone-700 rounded-full">{loc}</span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
+        {/* Hero — only on browse, no active booth filter */}
+        {currentTab === "browse" && !selectedBoothId && items.length === 0 && !isLoading && (
+          <section className="bg-stone-900 text-white py-16 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-3xl mx-auto text-center space-y-5">
+              <h1 className="font-serif text-4xl sm:text-5xl font-bold italic leading-tight">
+                Rare vintage. <br />Real stories.
+              </h1>
+              <p className="text-stone-400 text-base max-w-xl mx-auto leading-relaxed">
+                Authenticated garments sourced from London, Tokyo, New York and Milan. Bid live or buy outright.
+              </p>
+              <div className="flex flex-wrap justify-center gap-3 pt-2">
+                {isGuest && (
+                  <button
+                    onClick={() => setIsAuthModalOpen(true)}
+                    className="px-6 py-3 bg-brand hover:bg-brand-hover text-white text-sm font-semibold rounded-xl transition-colors"
+                  >
+                    Create free account
+                  </button>
+                )}
+                <button
+                  onClick={() => setCurrentTab("browse")}
+                  className="px-6 py-3 border border-stone-700 hover:border-stone-500 text-stone-300 text-sm font-medium rounded-xl transition-colors"
+                >
+                  Browse collection
+                </button>
+              </div>
+              <div className="flex flex-wrap justify-center gap-x-8 gap-y-2 pt-3 text-xs text-stone-500">
+                <span>✓ Provenance verified</span>
+                <span>✓ Flat measurements on every listing</span>
+                <span>✓ Secure checkout</span>
               </div>
             </div>
           </section>
         )}
 
-        {/* Main Content Render Layout */}
-        <Suspense fallback={<div className="max-w-7xl mx-auto px-4 py-12 text-center text-sm text-stone-500 font-mono uppercase tracking-[0.2em]">Loading showroom…</div>}>
-          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 dark:bg-[#131211]">
+        {/* Guest notice banner */}
+        {isGuest && items.length > 0 && (
+          <div className="bg-amber-50 border-b border-amber-200 text-amber-800 text-sm py-2.5 px-4 text-center">
+            <button onClick={() => setIsAuthModalOpen(true)} className="font-semibold hover:underline">
+              Sign in
+            </button>{" "}
+            to save items, place bids and checkout
+          </div>
+        )}
+
+        {/* Main content */}
+        <Suspense fallback={
+          <div className="max-w-7xl mx-auto px-4 py-20 text-center text-sm text-stone-400">
+            Loading…
+          </div>
+        }>
+          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 dark:bg-[#111110]">
           {currentTab === "browse" && (
             filteredItems.length > 0 ? (
               <VintageGrid
@@ -409,42 +360,35 @@ export default function App() {
                 onToggleWishlist={handleToggleWishlist}
               />
             ) : (
-              <div className="max-w-xl mx-auto py-20 text-center bg-[#FCFBF8] border border-dashed border-[#E6E1D5] rounded-2xl px-6" id="no_search_results_state">
-                <div className="w-16 h-16 rounded-full bg-amber-50 border border-amber-200 mx-auto mb-4 flex items-center justify-center">
-                  <Search className="w-7 h-7 text-amber-700" />
-                </div>
-                <h3 className="font-serif text-2xl font-bold text-[#1C1A17]">No pieces match your search</h3>
-                <p className="text-sm text-stone-500 mt-2 leading-relaxed">
-                  Try a different era, category, or market name to discover more archive pieces from our sourcing network.
+              <div className="max-w-md mx-auto py-24 text-center">
+                <div className="text-4xl mb-4">🔍</div>
+                <h3 className="text-xl font-semibold text-stone-800">No items found</h3>
+                <p className="text-sm text-stone-500 mt-2">
+                  {searchQuery ? `No results for "${searchQuery}"` : "No items in the collection yet."}
                 </p>
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery("")}
-                  className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#1C1A17] text-white text-[11px] font-mono uppercase tracking-wider font-bold transition-colors hover:bg-stone-800"
-                >
-                  Clear search
-                </button>
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="mt-5 px-5 py-2.5 bg-stone-900 text-white text-sm font-medium rounded-xl hover:bg-stone-800 transition-colors"
+                  >
+                    Clear search
+                  </button>
+                )}
               </div>
             )
           )}
 
           {currentTab === "wishlist" && (
-            <div className="space-y-8 animate-fade-in" id="wishlist_view_section">
-              <div className="border-b border-[#EBE8DF] pb-4 flex flex-col sm:flex-row sm:items-baseline justify-between gap-2">
-                <div>
-                  <span className="font-mono text-xs uppercase tracking-[0.25em] text-amber-700 font-bold block mb-1">
-                    Your Curated Showroom Vault
-                  </span>
-                  <h2 className="font-serif text-3xl sm:text-4xl font-bold italic text-[#1C1A17]">My Wishlist</h2>
-                </div>
-                <div className="font-mono text-xs text-amber-900 bg-amber-50 border border-amber-200/60 px-3.5 py-1.5 rounded-full whitespace-nowrap">
-                  {items.filter((item) => wishlist.includes(item.id)).length} {items.filter((item) => wishlist.includes(item.id)).length === 1 ? "piece" : "pieces"} cataloged
-                </div>
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-stone-900">Saved Items</h2>
+                <span className="text-sm text-stone-500">
+                  {wishlist.length} {wishlist.length === 1 ? "item" : "items"}
+                </span>
               </div>
-
-              {items.filter((item) => wishlist.includes(item.id)).length > 0 ? (
+              {wishlist.length > 0 ? (
                 <VintageGrid
-                  items={filteredItems.filter((item) => wishlist.includes(item.id))}
+                  items={filteredItems.filter(i => wishlist.includes(i.id))}
                   onSelectItem={(item) => setSelectedItem(item)}
                   selectedBoothId={null}
                   clearBoothFilter={() => {}}
@@ -453,19 +397,17 @@ export default function App() {
                   isWishlistView={true}
                 />
               ) : (
-                <div className="text-center py-20 bg-[#FCFBF8] border border-dashed border-[#EBE8DF] rounded-2xl max-w-lg mx-auto" id="empty_wishlist_panel">
-                  <div className="w-16 h-16 rounded-full bg-rose-50/50 flex items-center justify-center mx-auto mb-4 border border-rose-100">
-                    <Heart className="w-8 h-8 text-rose-400" />
-                  </div>
-                  <h3 className="font-serif text-xl font-bold text-[#1C1A17]">Wishlist is currently empty</h3>
-                  <p className="text-xs text-[#6B6152] mt-2 px-6 leading-relaxed">
-                    Explore the collections from Portobello, Shimokitazawa & Brooklyn flea, then tap the heart icon on any piece to register it to your wishlist.
+                <div className="text-center py-24">
+                  <div className="text-4xl mb-4">🤍</div>
+                  <h3 className="text-xl font-semibold text-stone-800">No saved items yet</h3>
+                  <p className="text-sm text-stone-500 mt-2">
+                    Tap the heart on any item to save it here.
                   </p>
                   <button
                     onClick={() => setCurrentTab("browse")}
-                    className="mt-6 inline-flex text-xs font-mono font-bold text-amber-800 hover:text-[#1C1A17] border-b border-amber-800 pb-0.5"
+                    className="mt-5 px-5 py-2.5 bg-stone-900 text-white text-sm font-medium rounded-xl hover:bg-stone-800 transition-colors"
                   >
-                    Browse The Collection
+                    Browse collection
                   </button>
                 </div>
               )}
@@ -613,64 +555,55 @@ export default function App() {
         )}
       </Suspense>
 
-      {/* Footer Column - High Aesthetic details */}
-      <footer className="bg-[#1C1A17] text-[#FAF9F5] border-t border-stone-805 mt-20" id="curated_boutique_footer">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 sm:gap-8 pb-12 border-b border-stone-800">
-            {/* Column 1 */}
-            <div className="space-y-4">
-              <span className="font-sans font-black text-xl bg-orange-600 px-3 py-1 rounded w-fit text-white block">
-                FITCHECK
-              </span>
-              <p className="text-stone-400 text-xs leading-relaxed max-w-sm">
-                A digital counter-response to crowded, low-quality superstores. Dedicated to premium vintage garments that tell original tales. We verify flat-measurements and materials so you buy only lasting design heritage.
+      {/* Footer */}
+      <footer className="bg-stone-900 text-stone-400 mt-20 border-t border-stone-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-10 border-b border-stone-800">
+            <div className="md:col-span-1">
+              <div className="flex items-center gap-1.5 mb-3">
+                <span className="bg-brand text-white px-2.5 py-1 rounded-md font-extrabold text-base">Fit</span>
+                <span className="font-serif font-bold text-base italic text-white">Check</span>
+              </div>
+              <p className="text-sm leading-relaxed">
+                Authenticated vintage clothing marketplace. Every piece verified, measured and sourced.
               </p>
             </div>
-
-            {/* Column 2 */}
-            <div className="space-y-4">
-              <h4 className="font-mono text-xs uppercase tracking-wider text-amber-500 font-bold">
-                Affiliated Sourcing Locations
-              </h4>
-              <ul className="text-xs text-stone-300 space-y-2 font-mono">
-                <li>• Portobello Road Gate 4, London, UK</li>
-                <li>• Shimokitazawa Block 3, Setagaya, Tokyo</li>
-                <li>• Brooklyn Flea Stand 9B, Brooklyn, NY</li>
-                <li>• Milan Navigli Canal Central Chest, Italy</li>
+            <div>
+              <h4 className="text-white text-sm font-semibold mb-3">Shop</h4>
+              <ul className="space-y-2 text-sm">
+                <li><button onClick={() => setCurrentTab("browse")} className="hover:text-white transition-colors">All items</button></li>
+                <li><button onClick={() => setCurrentTab("markets")} className="hover:text-white transition-colors">Sellers</button></li>
+                <li><button onClick={() => setCurrentTab("lookbooks")} className="hover:text-white transition-colors">Lookbooks</button></li>
               </ul>
             </div>
-
-            {/* Column 3 */}
-            <div className="space-y-4">
-              <h4 className="font-mono text-xs uppercase tracking-wider text-amber-500 font-bold">
-                Archival Stewardship
-              </h4>
-              <p className="text-stone-400 text-xs leading-relaxed">
-                By purchasing real vintage instead of cheap modern synthetics: <br />
-                <strong className="text-emerald-400">Carbon Saved per bid checkout: ~14.2kg CO2e.</strong> <br />
-                Insured flat-box courier dispatch guaranteed.
-              </p>
-              <div className="flex gap-3 pt-2 text-stone-400">
-                <Instagram className="w-4 h-4 hover:text-amber-400 transition-colors" />
-                <span className="text-[10px] uppercase font-mono tracking-widest hover:text-amber-400 cursor-pointer">@fitcheck_vintage</span>
-              </div>
+            <div>
+              <h4 className="text-white text-sm font-semibold mb-3">Sourced from</h4>
+              <ul className="space-y-2 text-sm">
+                <li>Portobello Road, London</li>
+                <li>Shimokitazawa, Tokyo</li>
+                <li>Brooklyn Flea, New York</li>
+                <li>Navigli, Milan</li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-white text-sm font-semibold mb-3">Trust</h4>
+              <ul className="space-y-2 text-sm">
+                <li>✓ Provenance verified</li>
+                <li>✓ Flat measurements</li>
+                <li>✓ Secure checkout</li>
+                <li>✓ Insured dispatch</li>
+              </ul>
             </div>
           </div>
-
-          {/* Copyright details */}
-          <div className="pt-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-[10px] font-mono text-stone-500">
-            <p>© {new Date().getFullYear()} FitCheck. All physical provenance recorded.</p>
-            <div className="flex gap-4">
-              <span className="hover:text-stone-300 cursor-pointer">Buyer Protection Charter</span>
-              <span>•</span>
-              <span className="hover:text-stone-300 cursor-pointer">Steward Terms of Auction</span>
-              <span>•</span>
-              <span className="hover:text-stone-300 cursor-pointer">Flat Measurement Guidelines</span>
+          <div className="pt-6 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs">
+            <p>© {new Date().getFullYear()} FitCheck. All rights reserved.</p>
+            <div className="flex items-center gap-1">
+              <Instagram className="w-4 h-4" />
+              <span>@fitcheck_vintage</span>
             </div>
           </div>
         </div>
       </footer>
-
     </div>
   );
 }

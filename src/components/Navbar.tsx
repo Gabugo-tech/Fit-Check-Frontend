@@ -1,26 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
-import { 
-  Search, 
-  ShoppingBag, 
-  Store, 
-  Shirt, 
-  User, 
-  PlusCircle, 
-  Heart, 
-  Sparkles, 
-  HelpCircle,
-  CheckCircle,
-  ShieldCheck,
-  ChevronDown,
-  Database,
-  Lock,
-  PhoneCall,
-  Flame,
-  Info,
-  Tag,
-  Clock,
-  Sun,
-  Moon
+import {
+  Search, ShoppingBag, Store, Shirt, User, Heart,
+  ChevronDown, Tag, Clock, Sun, Moon, Menu, X,
+  Sparkles, Database, LogOut, Settings, Package
 } from "lucide-react";
 
 interface NavbarProps {
@@ -40,442 +22,372 @@ interface NavbarProps {
   onToggleDarkMode?: () => void;
 }
 
-const ALL_SUGGESTIONS = [
+const SUGGESTIONS = [
   { text: "Outerwear", type: "category" },
   { text: "Tops", type: "category" },
   { text: "Bottoms", type: "category" },
   { text: "Dresses", type: "category" },
-  { text: "70s", type: "era" },
-  { text: "80s", type: "era" },
-  { text: "90s", type: "era" },
-  { text: "Y2K", type: "era" },
   { text: "70s Rocker", type: "era" },
   { text: "80s Retro", type: "era" },
   { text: "90s Grunge", type: "era" },
-  { text: "70s Boho-Chic", type: "era" },
-  { text: "90s Minimalist", type: "era" },
-  { text: "Y2K Gorpcore", type: "era" }
+  { text: "Y2K Gorpcore", type: "era" },
 ];
 
-export default function Navbar({ 
-  currentTab, 
-  setCurrentTab, 
-  activeBidCount, 
-  wishlistCount,
-  searchQuery, 
-  setSearchQuery,
-  userEmail,
-  setUserEmail,
-  userPhone = "",
-  userName = "Guest Customer",
-  onOpenAuthModal,
-  onLogout,
-  isDarkMode = false,
-  onToggleDarkMode
+const NAV_TABS = [
+  { id: "browse",    label: "Shop",        icon: Shirt },
+  { id: "markets",   label: "Sellers",     icon: Store },
+  { id: "lookbooks", label: "Lookbooks",   icon: Sparkles },
+  { id: "closet",    label: "My Orders",   icon: Package },
+];
+
+export default function Navbar({
+  currentTab, setCurrentTab,
+  activeBidCount, wishlistCount,
+  searchQuery, setSearchQuery,
+  userEmail, setUserEmail,
+  userPhone = "", userName = "",
+  onOpenAuthModal, onLogout,
+  isDarkMode = false, onToggleDarkMode,
 }: NavbarProps) {
-  const [showAccountDropdown, setShowAccountDropdown] = useState(false);
-  const [emailInput, setEmailInput] = useState(userEmail);
+  const [showDropdown, setShowDropdown] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Keep emailInput in sync when prop changes (e.g. after Google sign-in)
-  useEffect(() => {
-    setEmailInput(userEmail);
-  }, [userEmail]);
-  const suggestionsContainerRef = useRef<HTMLDivElement>(null);
-  const accountDropdownRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
+
+  const isAdmin = userEmail.trim().toLowerCase() === (import.meta.env.VITE_ADMIN_EMAIL || "nnanwubagabriel@gmail.com").toLowerCase();
+  const isGuest = !userEmail || userEmail.includes("guest");
+  const displayName = userName && !isGuest ? userName.split(" ")[0] : null;
 
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (suggestionsContainerRef.current && !suggestionsContainerRef.current.contains(event.target as Node)) {
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node))
+        setShowDropdown(false);
+      if (searchRef.current && !searchRef.current.contains(e.target as Node))
         setShowSuggestions(false);
-      }
-      if (accountDropdownRef.current && !accountDropdownRef.current.contains(event.target as Node)) {
-        setShowAccountDropdown(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
     };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const filteredSuggestions = searchQuery.trim() 
-    ? ALL_SUGGESTIONS.filter(item => 
-        item.text.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        item.text.toLowerCase() !== searchQuery.toLowerCase().trim()
-      ).slice(0, 5) // Limit to top 5 suggestions
+  const suggestions = searchQuery.trim()
+    ? SUGGESTIONS.filter(s =>
+        s.text.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        s.text.toLowerCase() !== searchQuery.toLowerCase()
+      ).slice(0, 5)
     : [];
 
-  const handleSelectSuggestion = (suggestion: string) => {
-    setSearchQuery(suggestion);
+  const handleSuggestion = (text: string) => {
+    setSearchQuery(text);
     setShowSuggestions(false);
-    if (currentTab !== "browse") {
-      setCurrentTab("browse");
-    }
+    setCurrentTab("browse");
   };
 
-  const isAdmin = userEmail.trim().toLowerCase() === "nnanwubagabriel@gmail.com";
-
-  const handleUpdateEmail = (e: React.FormEvent) => {
-    e.preventDefault();
-    setUserEmail(emailInput);
-    setShowAccountDropdown(false);
-  };
-
-  const logoutToGuest = () => {
-    const confirmed = window.confirm("Are you sure you want to sign out of your account?");
-    if (!confirmed) return;
-
-    if (onLogout) {
-      onLogout();
-    } else {
-      setEmailInput("guest@fitcheck.com");
-      setUserEmail("guest@fitcheck.com");
-    }
-    setShowAccountDropdown(false);
+  const handleLogout = () => {
+    const ok = window.confirm("Are you sure you want to sign out?");
+    if (!ok) return;
+    onLogout?.();
+    setShowDropdown(false);
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full" id="gabriel_header_root">
-      
-      {/* 1. Thin top announcement bar styled in Gabriel Vintage charcoal */}
-      <div className="bg-[#1C1A17] text-stone-200 text-[11px] font-sans py-1.5 px-4 sm:px-6 lg:px-8 border-b border-stone-800 flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <span className="flex items-center gap-1 font-bold text-jumia-orange">
-            <span className="w-1.5 h-1.5 rounded-full bg-jumia-orange animate-ping"></span>
-            FitCheck — Physical Provenance Guaranteed
+    <header className="sticky top-0 z-40 w-full bg-white border-b border-stone-200 shadow-sm">
+
+      {/* ── Announcement bar ── */}
+      <div className="bg-stone-900 text-stone-300 text-xs py-2 px-4 text-center hidden sm:block">
+        Free shipping on orders over ₦50,000 · Provenance verified on every piece
+        {isAdmin && (
+          <button
+            onClick={() => setCurrentTab("sell")}
+            className="ml-4 text-brand font-semibold hover:underline"
+          >
+            + Add new listing
+          </button>
+        )}
+      </div>
+
+      {/* ── Main header ── */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center gap-4">
+
+        {/* Logo */}
+        <button
+          onClick={() => { setCurrentTab("browse"); setSearchQuery(""); }}
+          className="shrink-0 flex items-center gap-1.5 select-none"
+          aria-label="FitCheck home"
+        >
+          <span className="bg-brand text-white px-2.5 py-1 rounded-md font-extrabold text-lg tracking-tight leading-none">
+            Fit
           </span>
-          {isAdmin && (
-            <>
-              <span className="hidden md:inline-block text-stone-700">|</span>
-              <button 
-                type="button"
-                onClick={() => setCurrentTab("sell")} 
-                className="hover:text-jumia-orange transition-colors flex items-center gap-1 font-medium cursor-pointer"
+          <span className="font-serif font-bold text-lg italic text-stone-900 leading-none -ml-0.5">
+            Check
+          </span>
+        </button>
+
+        {/* Search */}
+        <div ref={searchRef} className="flex-1 max-w-xl relative hidden md:flex">
+          <div className="relative w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400 pointer-events-none" />
+            <input
+              type="text"
+              aria-label="Search garments"
+              value={searchQuery}
+              placeholder="Search by era, brand, category…"
+              onFocus={() => setShowSuggestions(true)}
+              onChange={e => {
+                setSearchQuery(e.target.value);
+                setShowSuggestions(true);
+                if (currentTab !== "browse") setCurrentTab("browse");
+              }}
+              onKeyDown={e => {
+                if (e.key === "Enter") { setShowSuggestions(false); setCurrentTab("browse"); }
+                if (e.key === "Escape") setShowSuggestions(false);
+              }}
+              className="w-full bg-stone-50 border border-stone-200 rounded-lg py-2.5 pl-9 pr-4 text-sm text-stone-900 outline-none focus:border-brand focus:bg-white transition-colors placeholder:text-stone-400"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700"
+                aria-label="Clear search"
               >
-                <PlusCircle className="w-3.5 h-3.5 text-jumia-orange" />
-                Curator Upload Lounge
+                <X className="w-3.5 h-3.5" />
               </button>
-            </>
+            )}
+          </div>
+
+          {/* Suggestions dropdown */}
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-stone-200 rounded-xl shadow-lg overflow-hidden z-50">
+              {suggestions.map(s => (
+                <button
+                  key={s.text}
+                  type="button"
+                  onClick={() => handleSuggestion(s.text)}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-stone-50 text-left text-sm text-stone-700 transition-colors"
+                >
+                  {s.type === "category"
+                    ? <Tag className="w-3.5 h-3.5 text-brand shrink-0" />
+                    : <Clock className="w-3.5 h-3.5 text-stone-400 shrink-0" />
+                  }
+                  <span className="font-medium">{s.text}</span>
+                  <span className="ml-auto text-xs text-stone-400 capitalize">{s.type}</span>
+                </button>
+              ))}
+            </div>
           )}
         </div>
 
-        {/* Real-time curator email toggle */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 bg-stone-900 px-2.5 py-1 rounded border border-stone-800">
-            <span className="text-stone-400">Account:</span>
-            <span className={`font-mono font-bold ${isAdmin ? "text-emerald-400" : "text-stone-300"}`}>
-              {userEmail || "Guest User"}
-            </span>
-            {isAdmin ? (
-              <span className="text-[9px] bg-emerald-950 text-emerald-300 border border-emerald-800 px-1.5 rounded-full font-bold uppercase ml-1 block">
-                ⭐ Admin Curator
-              </span>
-            ) : (
-              <span className="text-[9px] bg-amber-950 text-amber-300 border border-amber-800 px-1.5 rounded-full font-bold uppercase ml-1 block">
-                ✓ Verified Customer
-              </span>
-            )}
-          </div>
-          <div className="hidden sm:flex items-center gap-1">
-            {isAdmin ? (
-              <button 
-                onClick={logoutToGuest}
-                className="text-[10px] text-stone-400 hover:text-white bg-stone-800 px-1.5 py-0.5 rounded transition-colors cursor-pointer"
-              >
-                Logout to Guest
-              </button>
-            ) : (
-              <button 
-                onClick={() => {
-                  if (onOpenAuthModal) onOpenAuthModal();
-                }}
-                className="text-[10px] text-white hover:bg-jumia-orange bg-stone-700 px-1.5 py-0.5 rounded font-bold transition-colors cursor-pointer"
-              >
-                Sign In
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
+        {/* Right controls */}
+        <div className="flex items-center gap-1 sm:gap-2 ml-auto md:ml-0">
 
-      {/* 2. Main E-commerce Header in Gabriel Slate & White */}
-      <div className="bg-white py-3.5 px-4 sm:px-6 lg:px-8 border-b border-stone-200/90 shadow-sm">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          
-          {/* FitCheck Logo */}
-          <div 
-            onClick={() => {
-              setCurrentTab("browse");
-              setSearchQuery("");
-            }}
-            className="cursor-pointer group flex items-center gap-2 select-none"
-            id="brand_logo_nav"
-          >
-            <div className="bg-jumia-orange text-white px-3.5 py-1.5 rounded-lg font-black tracking-tight text-xl sm:text-2xl font-sans flex items-center gap-0.5">
-              Fit<span className="text-stone-900 font-serif italic font-bold">Check</span>
-            </div>
-            <span className="text-[8px] border-2 border-stone-900 px-1 py-0.5 rounded font-mono font-bold hidden xl:inline">VERIFIED VINTAGE</span>
-          </div>
-
-          {/* Central Search Input with Help placeholder */}
-          <div ref={suggestionsContainerRef} className="w-full md:max-w-xl flex-1 flex relative" id="jumia_search_container">
-            <div className="relative flex-1">
-              <input
-                type="text"
-                aria-label="Search vintage garments"
-                value={searchQuery}
-                onFocus={() => setShowSuggestions(true)}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setShowSuggestions(true);
-                  if (currentTab !== "browse" && currentTab !== "wishlist") {
-                    setCurrentTab("browse");
-                  }
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    setShowSuggestions(false);
-                    if (currentTab !== "browse") setCurrentTab("browse");
-                  }
-                  if (e.key === "Escape") {
-                    setShowSuggestions(false);
-                  }
-                }}
-                placeholder="Search single-stitches, leathers, eras or sizes..."
-                className="w-full bg-[#FAF9F5] border-2 border-stone-200 focus:border-jumia-orange rounded-l-lg p-3 pl-10 text-sm font-sans outline-none transition-colors text-stone-900"
-              />
-              <Search className="absolute left-3 top-3.5 w-4.5 h-4.5 text-stone-400 pointer-events-none" />
-              {searchQuery && (
-                <button 
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-3 top-3.5 text-xs text-stone-400 hover:text-stone-930 font-mono font-bold"
-                >
-                  CLEAR
-                </button>
-              )}
-
-              {/* Autocomplete suggestions dropdown panel */}
-              {showSuggestions && filteredSuggestions.length > 0 && (
-                <div 
-                  className="absolute left-0 right-0 mt-1 bg-white border border-stone-200 rounded-lg shadow-lg overflow-hidden z-50 text-left" 
-                  id="search_autocomplete_suggestions_list"
-                >
-                  <p className="text-[10px] font-mono text-stone-400 p-2.5 uppercase tracking-wider font-extrabold bg-stone-50 border-b border-stone-100">
-                    Sourcing suggestions
-                  </p>
-                  <div className="divide-y divide-stone-100">
-                    {filteredSuggestions.map((item) => (
-                      <button
-                        key={item.text}
-                        type="button"
-                        onClick={() => handleSelectSuggestion(item.text)}
-                        className="w-full text-left py-2 px-3.5 hover:bg-stone-50 transition-colors flex items-center justify-between text-xs font-bold text-stone-800 cursor-pointer"
-                      >
-                        <div className="flex items-center gap-2">
-                          {item.type === "category" ? (
-                            <Tag className="w-3.5 h-3.5 text-jumia-orange shrink-0" />
-                          ) : (
-                            <Clock className="w-3.5 h-3.5 text-stone-400 shrink-0" />
-                          )}
-                          <span>{item.text}</span>
-                        </div>
-                        <span className="text-[8px] text-stone-500 font-mono bg-stone-100 px-1.5 py-0.5 rounded uppercase">
-                          {item.type}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-            <button 
-              onClick={() => {
-                if (currentTab !== "browse") {
-                  setCurrentTab("browse");
-                }
-              }}
-              className="bg-jumia-orange hover:bg-[#D55F02] text-white text-xs font-bold uppercase tracking-wider px-6 rounded-r-lg transition-colors flex items-center gap-1.5 cursor-pointer shrink-0 animate-fade-in"
+          {/* Dark mode */}
+          {onToggleDarkMode && (
+            <button
+              onClick={onToggleDarkMode}
+              className="p-2 rounded-lg text-stone-600 hover:bg-stone-100 transition-colors"
+              title={isDarkMode ? "Light mode" : "Dark mode"}
             >
-              <Search className="w-4 h-4" />
-              Filter
+              {isDarkMode ? <Sun className="w-5 h-5 text-amber-500" /> : <Moon className="w-5 h-5" />}
             </button>
-          </div>
+          )}
 
-          {/* Right Header Controls */}
-          <div className="flex items-center gap-4 sm:gap-5 font-sans text-xs sm:text-sm font-medium" id="header_right_controls">
-            
-            {/* Account dropdown / SMS Sign Up trigger */}
-            <div className="relative" ref={accountDropdownRef}>
-              <button 
-                onClick={() => setShowAccountDropdown(!showAccountDropdown)}
-                className="flex items-center gap-1 text-stone-800 hover:text-jumia-orange py-2 px-1 transition-colors cursor-pointer"
-                id="account_dropdown_trigger"
-              >
-                <div className="w-6 h-6 rounded-full bg-stone-100 flex items-center justify-center text-stone-900 font-bold text-xs uppercase border border-stone-200 shrink-0">
-                  {userName ? userName.charAt(0) : "U"}
-                </div>
-                <span className="max-w-[100px] truncate">
-                  {isAdmin ? "Hi, Gabriel" : userName ? `Hi, ${userName.split(" ")[0]}` : "My Account"}
-                </span>
-                <ChevronDown className={`w-3.5 h-3.5 text-stone-500 transition-transform duration-300 ${showAccountDropdown ? "rotate-180" : ""}`} />
-              </button>
+          {/* Wishlist */}
+          <button
+            onClick={() => setCurrentTab("wishlist")}
+            className="relative p-2 rounded-lg text-stone-600 hover:bg-stone-100 transition-colors"
+            aria-label="Wishlist"
+          >
+            <Heart className={`w-5 h-5 ${currentTab === "wishlist" ? "fill-rose-500 text-rose-500" : ""}`} />
+            {wishlistCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 bg-rose-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">
+                {wishlistCount > 9 ? "9+" : wishlistCount}
+              </span>
+            )}
+          </button>
 
-              {showAccountDropdown && (
-                <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-stone-200/95 py-4 px-4 text-[#313131] z-50 animate-fade-in" id="navbar_auth_dropdown">
-                  <div className="pb-3 border-b border-stone-100 mb-3 space-y-1">
-                    <p className="text-[10px] font-mono text-stone-400 uppercase tracking-wider font-extrabold">Active Customer Signature</p>
-                    <p className="font-bold text-xs text-stone-800 break-all">{userName || "Guest Customer"}</p>
-                    <p className="font-mono text-[10px] text-stone-500">{userEmail}</p>
-                    {userPhone && (
-                      <p className="font-mono text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 w-fit flex items-center gap-1">
-                        <CheckCircle className="w-3 h-3" />
-                         Phone: {userPhone}
-                      </p>
-                    )}
-                  </div>
+          {/* Cart / Vault */}
+          <button
+            onClick={() => setCurrentTab("closet")}
+            className="relative p-2 rounded-lg text-stone-600 hover:bg-stone-100 transition-colors"
+            aria-label="My orders"
+          >
+            <ShoppingBag className={`w-5 h-5 ${currentTab === "closet" ? "text-brand" : ""}`} />
+            {activeBidCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 bg-brand text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">
+                {activeBidCount > 9 ? "9+" : activeBidCount}
+              </span>
+            )}
+          </button>
 
-                  <div className="space-y-3">
-                    {/* Trigger AuthModal button */}
-                    <button
-                      onClick={() => {
-                        setShowAccountDropdown(false);
-                        if (onOpenAuthModal) onOpenAuthModal();
-                      }}
-                      className="w-full py-2 bg-jumia-orange hover:bg-jumia-orange-hover text-white text-center rounded text-xs font-bold transition-all uppercase tracking-wide cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
-                    >
-                      <User className="w-3.5 h-3.5" />
-                      Create/Connect Account
-                    </button>
-
-                    <div className="pt-2 border-t border-stone-100 space-y-2">
-                      <button 
-                        onClick={logoutToGuest}
-                        className="w-full text-center py-1.5 text-[10px] text-stone-500 hover:text-stone-900 font-mono font-bold"
-                      >
-                        Sign out
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Dark Mode toggle icon button */}
-            {onToggleDarkMode && (
+          {/* Account */}
+          <div className="relative" ref={dropdownRef}>
+            {isGuest ? (
               <button
-                type="button"
-                onClick={onToggleDarkMode}
-                className="p-2 hover:bg-stone-100 rounded-lg text-stone-700 transition-colors cursor-pointer flex items-center justify-center shrink-0"
-                title={isDarkMode ? "Switch to Light Aesthetic" : "Switch to Dark Aesthetic"}
-                id="toggle_dark_mode_theme_btn"
+                onClick={() => onOpenAuthModal?.()}
+                className="hidden sm:flex items-center gap-2 px-4 py-2 bg-brand hover:bg-brand-hover text-white text-sm font-semibold rounded-lg transition-colors"
               >
-                {isDarkMode ? (
-                  <Sun className="w-5 h-5 text-amber-500" />
-                ) : (
-                  <Moon className="w-5 h-5 text-stone-600" />
-                )}
+                <User className="w-4 h-4" />
+                Sign in
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowDropdown(p => !p)}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-stone-100 transition-colors"
+              >
+                <div className="w-7 h-7 rounded-full bg-brand text-white text-xs font-bold flex items-center justify-center uppercase shrink-0">
+                  {(displayName || "U").charAt(0)}
+                </div>
+                <span className="hidden sm:block text-sm font-medium text-stone-800 max-w-[80px] truncate">
+                  {displayName || "Account"}
+                </span>
+                <ChevronDown className={`w-3.5 h-3.5 text-stone-500 transition-transform hidden sm:block ${showDropdown ? "rotate-180" : ""}`} />
               </button>
             )}
 
-            {/* Wishlist Link */}
-            <button 
-              onClick={() => setCurrentTab("wishlist")}
-              className={`flex items-center gap-1.5 relative px-2.5 py-1.5 rounded-lg transition-all ${
-                currentTab === "wishlist" ? "bg-stone-100 text-jumia-orange" : "text-stone-850 hover:text-jumia-orange"
-              }`}
-            >
-              <Heart className={`w-5 h-5 ${currentTab === "wishlist" ? "fill-rose-500 text-rose-500" : ""}`} />
-              <span className="hidden md:inline">Saved</span>
-              {wishlistCount > 0 && (
-                <span className="bg-rose-500 text-white text-[10px] font-bold rounded-full h-5 min-w-[20px] px-1 flex items-center justify-center border border-white">
-                  {wishlistCount}
-                </span>
-              )}
-            </button>
+            {showDropdown && !isGuest && (
+              <div className="absolute right-0 mt-2 w-64 bg-white border border-stone-200 rounded-xl shadow-xl z-50 overflow-hidden animate-fade-in">
+                {/* User info */}
+                <div className="px-4 py-3 bg-stone-50 border-b border-stone-100">
+                  <p className="text-sm font-semibold text-stone-900 truncate">{userName || "User"}</p>
+                  <p className="text-xs text-stone-500 truncate mt-0.5">{userEmail}</p>
+                  {isAdmin && (
+                    <span className="mt-1.5 inline-flex items-center gap-1 text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">
+                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+                      Admin
+                    </span>
+                  )}
+                </div>
 
-            {/* My Vault / Cart */}
-            <button 
-              onClick={() => setCurrentTab("closet")}
-              className={`flex items-center gap-1.5 relative px-2.5 py-1.5 rounded-lg transition-all ${
-                currentTab === "closet" ? "bg-stone-100 text-jumia-orange" : "text-stone-850 hover:text-jumia-orange"
-              }`}
-            >
-              <ShoppingBag className="w-5 h-5 text-stone-800" />
-              <span className="hidden md:inline">My Vault</span>
-              {activeBidCount > 0 && (
-                <span className="bg-jumia-orange text-white text-[10px] font-bold rounded-full h-5 min-w-[20px] px-1 flex items-center justify-center border border-white animate-pulse">
-                  {activeBidCount}
-                </span>
-              )}
-            </button>
+                {/* Menu items */}
+                <div className="py-1.5">
+                  <button
+                    onClick={() => { setCurrentTab("closet"); setShowDropdown(false); }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-stone-700 hover:bg-stone-50 transition-colors"
+                  >
+                    <Package className="w-4 h-4 text-stone-400" />
+                    My Orders
+                  </button>
+                  <button
+                    onClick={() => { setCurrentTab("wishlist"); setShowDropdown(false); }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-stone-700 hover:bg-stone-50 transition-colors"
+                  >
+                    <Heart className="w-4 h-4 text-stone-400" />
+                    Saved Items
+                    {wishlistCount > 0 && (
+                      <span className="ml-auto text-xs bg-stone-100 text-stone-600 px-2 py-0.5 rounded-full font-medium">{wishlistCount}</span>
+                    )}
+                  </button>
+                  {isAdmin && (
+                    <button
+                      onClick={() => { setCurrentTab("admin"); setShowDropdown(false); }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-emerald-700 hover:bg-emerald-50 transition-colors"
+                    >
+                      <Database className="w-4 h-4 text-emerald-500" />
+                      Admin Dashboard
+                    </button>
+                  )}
+                </div>
 
+                <div className="border-t border-stone-100 py-1.5">
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sign out
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
+
+          {/* Mobile menu toggle */}
+          <button
+            onClick={() => setMobileMenuOpen(p => !p)}
+            className="md:hidden p-2 rounded-lg text-stone-600 hover:bg-stone-100 transition-colors"
+            aria-label="Menu"
+          >
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
         </div>
       </div>
 
-      {/* 3. Bottom E-Commerce Navigation (Gabriel Dark Grey bar containing main views) */}
-      <div className="bg-[#1C1A17] shadow-md border-b border-stone-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center overflow-x-auto justify-start md:justify-center gap-2 sm:gap-4 py-2 text-white no-scrollbar">
-          
-          <button
-            onClick={() => {
-              setCurrentTab("browse");
-              setSearchQuery("");
-            }}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded text-xs font-bold tracking-wider uppercase transition-all whitespace-nowrap cursor-pointer ${
-              currentTab === "browse" ? "bg-jumia-orange text-white" : "hover:bg-stone-800 hover:text-stone-200 text-stone-300"
-            }`}
-          >
-            <Shirt className="w-4 h-4 shrink-0" />
-            Showroom (Shop)
-          </button>
+      {/* ── Mobile search ── */}
+      <div className="md:hidden px-4 pb-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400 pointer-events-none" />
+          <input
+            type="text"
+            value={searchQuery}
+            placeholder="Search garments…"
+            onChange={e => { setSearchQuery(e.target.value); setCurrentTab("browse"); }}
+            className="w-full bg-stone-50 border border-stone-200 rounded-lg py-2.5 pl-9 pr-4 text-sm text-stone-900 outline-none focus:border-brand transition-colors"
+          />
+        </div>
+      </div>
 
-          <button
-            onClick={() => setCurrentTab("markets")}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded text-xs font-bold tracking-wider uppercase transition-all whitespace-nowrap cursor-pointer ${
-              currentTab === "markets" ? "bg-jumia-orange text-white" : "hover:bg-stone-800 hover:text-stone-200 text-stone-300"
-            }`}
-          >
-            <Store className="w-4 h-4 shrink-0" />
-            Market Stalls
-          </button>
-
-          <button
-            onClick={() => setCurrentTab("lookbooks")}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded text-xs font-bold tracking-wider uppercase transition-all whitespace-nowrap cursor-pointer ${
-              currentTab === "lookbooks" ? "bg-jumia-orange text-white" : "hover:bg-stone-800 hover:text-stone-200 text-stone-300"
-            }`}
-          >
-            <Sparkles className="w-4 h-4 shrink-0" />
-            LOOKBOOKS
-          </button>
-
-          {/* Admin Dashboard Tab is prominent for Darcy, and helper link is present */}
+      {/* ── Bottom nav tabs ── */}
+      <nav className="border-t border-stone-100 bg-white hidden md:block">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-1 overflow-x-auto no-scrollbar">
+          {NAV_TABS.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => setCurrentTab(id)}
+              className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                currentTab === id
+                  ? "border-brand text-brand"
+                  : "border-transparent text-stone-600 hover:text-stone-900 hover:border-stone-300"
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              {label}
+            </button>
+          ))}
           {isAdmin && (
             <button
               onClick={() => setCurrentTab("admin")}
-              className={`flex items-center gap-2 px-4 py-1.5 rounded text-xs font-bold tracking-wider uppercase transition-all whitespace-nowrap cursor-pointer ${
-                currentTab === "admin" ? "bg-emerald-600 text-white" : "hover:bg-emerald-900/60 hover:text-stone-200 text-emerald-400"
+              className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                currentTab === "admin"
+                  ? "border-emerald-500 text-emerald-700"
+                  : "border-transparent text-emerald-600 hover:text-emerald-700 hover:border-emerald-300"
               }`}
             >
-              <Database className="w-4 h-4 shrink-0 text-emerald-400" />
-              ⭐ Admin Cockpit
+              <Database className="w-4 h-4" />
+              Admin
             </button>
           )}
-
-          <button
-            onClick={() => setCurrentTab("closet")}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded text-xs font-bold tracking-wider uppercase transition-all whitespace-nowrap cursor-pointer ${
-              currentTab === "closet" ? "bg-jumia-orange text-white" : "hover:bg-stone-800 hover:text-stone-200 text-stone-300"
-            }`}
-          >
-            <User className="w-4 h-4 shrink-0" />
-            My Vault
-          </button>
-
         </div>
-      </div>
+      </nav>
+
+      {/* ── Mobile nav drawer ── */}
+      {mobileMenuOpen && (
+        <div className="md:hidden border-t border-stone-100 bg-white animate-fade-in">
+          <div className="px-4 py-2 space-y-1">
+            {NAV_TABS.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                onClick={() => { setCurrentTab(id); setMobileMenuOpen(false); }}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  currentTab === id ? "bg-brand/10 text-brand" : "text-stone-700 hover:bg-stone-50"
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {label}
+              </button>
+            ))}
+            {isGuest && (
+              <button
+                onClick={() => { onOpenAuthModal?.(); setMobileMenuOpen(false); }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-white bg-brand mt-2"
+              >
+                <User className="w-4 h-4" />
+                Sign in / Create account
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </header>
   );
 }
