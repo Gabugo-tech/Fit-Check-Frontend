@@ -123,6 +123,9 @@ export default function Navbar({
   };
 
   const logoutToGuest = () => {
+    const confirmed = window.confirm("Are you sure you want to sign out of your account?");
+    if (!confirmed) return;
+
     if (onLogout) {
       onLogout();
     } else {
