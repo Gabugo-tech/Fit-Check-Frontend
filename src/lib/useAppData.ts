@@ -10,7 +10,7 @@ import {
   tokenStore,
 } from "./api";
 import { safeLocalStorage } from "./storage";
-import { INITIAL_ITEMS, INITIAL_BOOTHS, INITIAL_LOOKBOOKS } from "../data";
+import { INITIAL_BOOTHS, INITIAL_LOOKBOOKS } from "../data";
 import type { VintageItem, BidRecord } from "../types";
 
 export function useAppData() {
@@ -36,7 +36,7 @@ export function useAppData() {
       const mappedItems = dbItems.map(mapDbItem) as VintageItem[];
       const mappedBids = dbBids.map(mapDbBid) as BidRecord[];
 
-      setItems(mappedItems.length > 0 ? mappedItems : INITIAL_ITEMS);
+      setItems(mappedItems);
       setBidLogs(mappedBids);
       setUsingBackend(true);
 
@@ -65,12 +65,12 @@ export function useAppData() {
       const storedPurchases = safeLocalStorage.getItem("vintage_purchased_ids");
       const storedWishlist = safeLocalStorage.getItem("wishlist");
 
-      setItems(storedItems ? JSON.parse(storedItems) : INITIAL_ITEMS);
+      setItems(storedItems ? JSON.parse(storedItems) : []);
       setBidLogs(storedBids ? JSON.parse(storedBids) : []);
       setPurchasedItemIds(storedPurchases ? JSON.parse(storedPurchases) : []);
       setWishlist(storedWishlist ? JSON.parse(storedWishlist) : []);
     } catch {
-      setItems(INITIAL_ITEMS);
+      setItems([]);
     }
   }
 
