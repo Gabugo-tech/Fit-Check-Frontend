@@ -1,27 +1,12 @@
 import React, { useState } from "react";
 import { VintageItem, MarketBooth, BidRecord } from "../types";
 import { safeLocalStorage } from "../lib/storage";
-import { 
-  TrendingDown, 
-  Trash2, 
-  Edit3, 
-  ShieldCheck, 
-  Tag, 
-  BarChart2, 
-  Gavel, 
-  Plus, 
-  Percent, 
-  Package, 
-  Users, 
-  Sparkles, 
-  Globe, 
-  ArrowUpRight,
-  Database,
-  RefreshCw,
-  FolderOpen,
-  AlertTriangle,
-  UploadCloud,
-  Image
+import { sellersApi } from "../lib/api";
+import {
+  TrendingDown, Trash2, Edit3, ShieldCheck, Tag, BarChart2,
+  Gavel, Plus, Percent, Package, Users, Sparkles, Globe,
+  ArrowUpRight, Database, RefreshCw, FolderOpen, AlertTriangle,
+  UploadCloud, Image, Store, X, Check, Loader2
 } from "lucide-react";
 
 interface AdminDashboardProps {
@@ -33,6 +18,7 @@ interface AdminDashboardProps {
   setBidLogs: React.Dispatch<React.SetStateAction<BidRecord[]>>;
   purchasedItemIds: string[];
   userEmail: string;
+  onSellersChanged?: () => Promise<void>;
 }
 
 export default function AdminDashboard({
@@ -43,7 +29,8 @@ export default function AdminDashboard({
   bidLogs,
   setBidLogs,
   purchasedItemIds,
-  userEmail
+  userEmail,
+  onSellersChanged,
 }: AdminDashboardProps) {
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
@@ -51,6 +38,18 @@ export default function AdminDashboard({
   const [editedTitle, setEditedTitle] = useState<string>("");
   const [priceCutReason, setPriceCutReason] = useState<string>("");
   const [adminToast, setAdminToast] = useState<string | null>(null);
+
+  // ── Seller management state ───────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState<"items" | "sellers">("items");
+  const [sellerForm, setSellerForm] = useState({
+    name: "", curator: "", location: "", tagline: "",
+    bio: "", aesthetic: "", established: "", avatar: "", bannerImage: "",
+  });
+  const [sellerFormError, setSellerFormError] = useState("");
+  const [sellerSaving, setSellerSaving] = useState(false);
+  const [editingSellerId, setEditingSellerId] = useState<string | null>(null);
+  const [deletingSellerId, setDeletingSellerId] = useState<string | null>(null);
+  const [sellerDeleteLoading, setSellerDeleteLoading] = useState(false);
 
   const showAdminToast = (msg: string) => {
     setAdminToast(msg);
@@ -288,6 +287,79 @@ export default function AdminDashboard({
     }
   };
 
+  // ── Seller management handlers ────────────────────────────────────────────
+  const resetSellerForm = () => {
+    setSellerForm({ name: "", curator: "", location: "", tagline: "", bio: "", aesthetic: "", established: "", avatar: "", bannerImage: "" });
+    setSellerFormError("");
+    setEditingSellerId(null);
+  };
+
+  const handleSellerSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!sellerForm.name.trim() || !sellerForm.curator.trim()) {
+      setSellerFormError("Seller name and curator name are required.");
+      return;
+    }
+    setSellerSaving(true);
+    setSellerFormError("");
+    try {
+      const payload = {
+        name: sellerForm.name.trim(),
+        curator: sellerForm.curator.trim(),
+        location: sellerForm.location.trim() || undefined,
+        tagline: sellerForm.tagline.trim() || undefined,
+        bio: sellerForm.bio.trim() || undefined,
+        aesthetic: sellerForm.aesthetic.trim() || undefined,
+        established: sellerForm.established.trim() || undefined,
+        avatar: sellerForm.avatar.trim() || undefined,
+        bannerImage: sellerForm.bannerImage.trim() || undefined,
+      };
+      if (editingSellerId) {
+        await sellersApi.update(editingSellerId, payload);
+        showAdminToast(`✅ Seller "${payload.name}" updated.`);
+      } else {
+        await sellersApi.create(payload);
+        showAdminToast(`✅ Seller "${payload.name}" registered.`);
+      }
+      resetSellerForm();
+      await onSellersChanged?.();
+    } catch (err: any) {
+      setSellerFormError(err.message || "Failed to save seller.");
+    } finally {
+      setSellerSaving(false);
+    }
+  };
+
+  const handleEditSeller = (booth: any) => {
+    setEditingSellerId(booth.id);
+    setSellerForm({
+      name: booth.name || "",
+      curator: booth.curator || "",
+      location: booth.location || "",
+      tagline: booth.tagline || "",
+      bio: booth.bio || "",
+      aesthetic: booth.aesthetic || "",
+      established: booth.established || "",
+      avatar: booth.avatar || "",
+      bannerImage: booth.bannerImage || "",
+    });
+    setActiveTab("sellers");
+  };
+
+  const handleDeleteSeller = async (id: string) => {
+    setSellerDeleteLoading(true);
+    try {
+      await sellersApi.delete(id);
+      showAdminToast("✅ Seller removed.");
+      setDeletingSellerId(null);
+      await onSellersChanged?.();
+    } catch (err: any) {
+      showAdminToast(`❌ ${err.message}`);
+    } finally {
+      setSellerDeleteLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-8 animate-fade-in" id="admin_dashboard_workspace">
 
@@ -371,8 +443,189 @@ export default function AdminDashboard({
 
       </div>
 
-      {/* Grid: Create garment on side, edit clothes catalog on main */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      {/* ── Tab switcher: Items / Sellers ── */}
+      <div className="flex border-b border-stone-200">
+        {[
+          { id: "items",   label: "Item Listings" },
+          { id: "sellers", label: "Seller Management" },
+        ].map(t => (
+          <button
+            key={t.id}
+            onClick={() => setActiveTab(t.id as "items" | "sellers")}
+            className={`px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
+              activeTab === t.id
+                ? "border-brand text-brand"
+                : "border-transparent text-stone-500 hover:text-stone-800"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── SELLERS PANEL ── */}
+      {activeTab === "sellers" && (
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+          {/* Form */}
+          <div className="bg-white border border-stone-200 rounded-xl p-5 space-y-4">
+            <h3 className="text-sm font-bold text-stone-900 flex items-center gap-2">
+              <Store className="w-4 h-4 text-brand" />
+              {editingSellerId ? "Edit Seller" : "Register New Seller"}
+            </h3>
+
+            <form onSubmit={handleSellerSubmit} className="space-y-3">
+              {[
+                { label: "Seller / Stall Name *", key: "name",      placeholder: "e.g. Neon Nostalgia" },
+                { label: "Curator Name *",         key: "curator",   placeholder: "e.g. Chloe Sterling" },
+                { label: "Location",               key: "location",  placeholder: "e.g. London, UK (Portobello Road)" },
+                { label: "Tagline",                key: "tagline",   placeholder: "e.g. London's premier crate of 70s rebellion" },
+                { label: "Aesthetic / Style",      key: "aesthetic", placeholder: "e.g. 70s Rock & Y2K Tech" },
+                { label: "Established",            key: "established", placeholder: "e.g. Est. 2011" },
+                { label: "Avatar Image URL",       key: "avatar",    placeholder: "https://..." },
+                { label: "Banner Image URL",       key: "bannerImage", placeholder: "https://..." },
+              ].map(({ label, key, placeholder }) => (
+                <div key={key}>
+                  <label className="block text-xs font-medium text-stone-600 mb-1">{label}</label>
+                  <input
+                    type="text"
+                    value={sellerForm[key as keyof typeof sellerForm]}
+                    onChange={e => setSellerForm(p => ({ ...p, [key]: e.target.value }))}
+                    placeholder={placeholder}
+                    className="w-full border border-stone-200 rounded-lg px-3 py-2 text-xs text-stone-900 outline-none focus:border-brand transition-colors"
+                  />
+                </div>
+              ))}
+
+              <div>
+                <label className="block text-xs font-medium text-stone-600 mb-1">Bio</label>
+                <textarea
+                  value={sellerForm.bio}
+                  onChange={e => setSellerForm(p => ({ ...p, bio: e.target.value }))}
+                  placeholder="Describe the seller and their sourcing story…"
+                  rows={3}
+                  className="w-full border border-stone-200 rounded-lg px-3 py-2 text-xs text-stone-900 outline-none focus:border-brand transition-colors resize-none"
+                />
+              </div>
+
+              {sellerFormError && (
+                <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                  {sellerFormError}
+                </p>
+              )}
+
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="submit"
+                  disabled={sellerSaving}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-60"
+                >
+                  {sellerSaving
+                    ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Saving…</>
+                    : <><Check className="w-3.5 h-3.5" />{editingSellerId ? "Update Seller" : "Register Seller"}</>
+                  }
+                </button>
+                {editingSellerId && (
+                  <button
+                    type="button"
+                    onClick={resetSellerForm}
+                    className="px-3 py-2.5 border border-stone-200 text-stone-600 text-xs font-semibold rounded-lg hover:bg-stone-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+            </form>
+          </div>
+
+          {/* Seller list */}
+          <div className="xl:col-span-2 bg-white border border-stone-200 rounded-xl p-5 space-y-3">
+            <h3 className="text-sm font-bold text-stone-900 flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Store className="w-4 h-4 text-brand" />
+                Registered Sellers ({booths.length})
+              </span>
+            </h3>
+
+            {booths.length === 0 ? (
+              <div className="text-center py-12 text-stone-400">
+                <Store className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                <p className="text-sm">No sellers registered yet.</p>
+                <p className="text-xs mt-1">Use the form to register your first seller.</p>
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
+                {booths.map(booth => (
+                  <div key={booth.id} className="border border-stone-100 rounded-xl p-4 flex items-start gap-3">
+                    {booth.avatar && (
+                      <img
+                        src={booth.avatar}
+                        alt={booth.name}
+                        className="w-10 h-10 rounded-full object-cover shrink-0 border border-stone-200"
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <div>
+                          <p className="text-sm font-semibold text-stone-900 truncate">{booth.name}</p>
+                          <p className="text-xs text-stone-500">by {booth.curator} · {booth.location || "—"}</p>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => handleEditSeller(booth)}
+                            className="p-1.5 rounded-lg text-stone-500 hover:bg-stone-100 transition-colors"
+                            title="Edit"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                          {deletingSellerId === booth.id ? (
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleDeleteSeller(booth.id)}
+                                disabled={sellerDeleteLoading}
+                                className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg"
+                              >
+                                {sellerDeleteLoading ? "…" : "Confirm"}
+                              </button>
+                              <button
+                                onClick={() => setDeletingSellerId(null)}
+                                className="px-2 py-1 border border-stone-200 text-stone-600 text-xs rounded-lg hover:bg-stone-50"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setDeletingSellerId(booth.id)}
+                              className="p-1.5 rounded-lg text-stone-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      {booth.tagline && (
+                        <p className="text-xs text-stone-500 italic mt-1 truncate">"{booth.tagline}"</p>
+                      )}
+                      {booth.aesthetic && (
+                        <span className="inline-block mt-1.5 text-[10px] bg-orange-50 text-brand border border-orange-200 px-2 py-0.5 rounded-full font-medium">
+                          {booth.aesthetic}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── ITEMS PANEL (existing content) ── */}
+      {activeTab === "items" && (
+        <React.Fragment>
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         
         {/* LEFT COLUMN: Simplified Garment Creator (Saves typing long forms) */}
         <div className="bg-white dark:bg-[#181716] p-5 rounded-xl border border-stone-200 dark:border-stone-800 shadow-sm space-y-4">
@@ -680,48 +933,42 @@ export default function AdminDashboard({
 
       </div>
 
-      {/* FULL RECORD: Real-Time Verification logs of Orders */}
+      {/* Orders log */}
       <div className="bg-white dark:bg-[#181716] p-5 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-sm space-y-4">
         <h3 className="text-xs uppercase font-black text-stone-900 dark:text-stone-100 tracking-wider flex items-center gap-1.5">
           <span className="w-1.5 h-3.5 bg-jumia-orange rounded-sm block"></span>
-          Archivist Checkout Log ({bidLogs.length} total orders)
+          Checkout Log ({bidLogs.length} orders)
         </h3>
-
-        <div className="overflow-x-auto" id="register_bids_table">
+        <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="border-b border-stone-200 text-stone-400 font-mono text-[10px] uppercase">
-                <th className="py-2.5">Buyer Name Signature</th>
-                <th className="py-2.5">Vintage Garment Title</th>
-                <th className="py-2.5">Order Price Total</th>
-                <th className="py-2.5">Order Timestamp</th>
-                <th className="py-2.5">Verification status</th>
+                <th className="py-2.5">Buyer</th>
+                <th className="py-2.5">Item</th>
+                <th className="py-2.5">Amount</th>
+                <th className="py-2.5">Date</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-100">
               {bidLogs.slice().reverse().map((bid, idx) => (
-                <tr key={bid.id || idx} className="hover:bg-stone-50/50 transition-colors">
+                <tr key={bid.id || idx} className="hover:bg-stone-50/50">
                   <td className="py-2.5 text-stone-800 font-bold">{bid.bidderName}</td>
-                  <td className="py-2.5 text-stone-600 font-medium max-w-[200px] truncate">{bid.itemTitle}</td>
-                  <td className="py-2.5 text-jumia-orange font-mono font-extrabold">₦{bid.amount.toLocaleString()}</td>
-                  <td className="py-2.5 text-stone-400 text-[10px] font-mono">{new Date(bid.timestamp).toLocaleDateString()} {new Date(bid.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</td>
-                  <td className="py-2.5">
-                    <span className="text-[9px] bg-emerald-950 text-emerald-300 border border-emerald-800 px-1.5 py-0.5 rounded-full font-bold">
-                      ✓ Authenticity Checked
-                    </span>
+                  <td className="py-2.5 text-stone-600 max-w-[200px] truncate">{bid.itemTitle}</td>
+                  <td className="py-2.5 text-brand font-mono font-bold">₦{bid.amount.toLocaleString()}</td>
+                  <td className="py-2.5 text-stone-400 text-[10px] font-mono">
+                    {new Date(bid.timestamp).toLocaleDateString()}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-
           {bidLogs.length === 0 && (
-            <div className="text-center py-6 text-stone-400 font-mono text-xs">
-              No direct order purchases checked out in database yet.
-            </div>
+            <div className="text-center py-6 text-stone-400 text-xs">No orders yet.</div>
           )}
         </div>
       </div>
+        </React.Fragment>
+      )}
 
     </div>
   );

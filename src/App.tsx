@@ -18,7 +18,7 @@ const VendorProfile = lazy(() => import("./components/VendorProfile"));
 const FeedbackModal = lazy(() => import("./components/FeedbackModal"));
 
 import { VintageItem, MarketBooth, BidRecord, Lookbook } from "./types";
-import { INITIAL_BOOTHS, INITIAL_ITEMS, INITIAL_LOOKBOOKS } from "./data";
+import { INITIAL_ITEMS, INITIAL_LOOKBOOKS } from "./data";
 import { Star, Shield, ShieldCheck, HelpCircle, Heart, Instagram, ShoppingBag, User, Search } from "lucide-react";
 
 export default function App() {
@@ -55,12 +55,14 @@ export default function App() {
   // ── Backend-powered data hook ─────────────────────────────────────────────
   const {
     items, setItems,
+    sellers,
     bidLogs, setBidLogs,
     purchasedItemIds, setPurchasedItemIds,
     wishlist,
     isLoading,
     usingBackend,
     loadData,
+    reloadSellers,
     placeBid: apiBidPlace,
     buyNow: apiBuyNow,
     toggleWishlist: apiToggleWishlist,
@@ -142,13 +144,15 @@ export default function App() {
     }
   };
 
-  // Load booths and lookbooks (static for now)
+  // Lookbooks remain static for now; sellers come from the DB via useAppData
   useEffect(() => {
-    setBooths(INITIAL_BOOTHS);
     setLookbooks(INITIAL_LOOKBOOKS);
   }, []);
 
-  // Load reviews — from DB if available, else localStorage
+  // Keep booths state in sync with sellers from DB
+  useEffect(() => {
+    setBooths(sellers);
+  }, [sellers]);
   useEffect(() => {
     if (usingBackend && feedbackVendorId) return; // reviews loaded per-vendor
     try {
@@ -496,6 +500,7 @@ export default function App() {
               setBidLogs={setBidLogs}
               purchasedItemIds={purchasedItemIds}
               userEmail={userEmail}
+              onSellersChanged={reloadSellers}
             />
           )}
           </main>

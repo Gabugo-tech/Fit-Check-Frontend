@@ -70,13 +70,13 @@ export const authApi = {
 export const otpApi = {
   send: (email: string) =>
     request<{ ok: boolean; message: string; email: string }>(
-      "/otp/send",
+      "/otp?action=send",
       { method: "POST", body: JSON.stringify({ email }) }
     ),
 
   verify: (email: string, code: string) =>
     request<{ ok: boolean; message: string; email: string }>(
-      "/otp/verify",
+      "/otp?action=verify",
       { method: "POST", body: JSON.stringify({ email, code }) }
     ),
 };
@@ -145,7 +145,65 @@ export const reviewsApi = {
   }) => request<any>("/reviews", { method: "POST", body: JSON.stringify(data) }),
 };
 
+// ─── Sellers ─────────────────────────────────────────────────────────────────
+export interface DbSeller {
+  id: string;
+  name: string;
+  curator: string;
+  avatar: string | null;
+  tagline: string | null;
+  bio: string | null;
+  location: string | null;
+  rating: number;
+  established: string | null;
+  aesthetic: string | null;
+  banner_image: string | null;
+  created_at: string;
+}
+
+export const sellersApi = {
+  getAll: () =>
+    request<DbSeller[]>("/sellers"),
+
+  create: (data: {
+    name: string;
+    curator: string;
+    avatar?: string;
+    tagline?: string;
+    bio?: string;
+    location?: string;
+    rating?: number;
+    established?: string;
+    aesthetic?: string;
+    bannerImage?: string;
+  }) => request<DbSeller>("/sellers", { method: "POST", body: JSON.stringify(data) }),
+
+  update: (id: string, data: Partial<{
+    name: string; curator: string; avatar: string;
+    tagline: string; bio: string; location: string;
+    rating: number; established: string; aesthetic: string; bannerImage: string;
+  }>) => request<DbSeller>(`/sellers?id=${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+
+  delete: (id: string) =>
+    request<{ ok: boolean }>(`/sellers?id=${id}`, { method: "DELETE" }),
+};
+
 // ─── DB to Frontend type mapper ───────────────────────────────────────────────
+export function mapDbSeller(row: DbSeller) {
+  return {
+    id: row.id,
+    name: row.name,
+    curator: row.curator,
+    avatar: row.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&q=80",
+    tagline: row.tagline || "",
+    bio: row.bio || "",
+    location: row.location || "",
+    rating: Number(row.rating || 5.0),
+    established: row.established || `Est. ${new Date().getFullYear()}`,
+    aesthetic: row.aesthetic || "",
+    bannerImage: row.banner_image || "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=800&q=80",
+  };
+}
 export function mapDbItem(row: any) {
   return {
     id: row.id,
