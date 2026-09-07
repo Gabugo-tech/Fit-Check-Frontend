@@ -184,8 +184,11 @@ export default function AdminDashboard({
     showAdminToast(`✅ Applied 15% Price Cut on: "${targetItem.title}" (₦${originalPrice.toLocaleString()} → ₦${cutPrice.toLocaleString()})`);
   };
 
-  // Admin manually registers a live bid to bid logs
-  const handleManualListingCreate = (e: React.FormEvent) => {
+  // ── Add item prop so we can reload after DB save ─────────────────────────
+  const [listingSaving, setListingSaving] = useState(false);
+
+  // Admin manually registers a live listing — saves to DB so all customers see it
+  const handleManualListingCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!previewAddTitle.trim()) {
       showAdminToast("⚠ Please provide a title");
@@ -194,41 +197,51 @@ export default function AdminDashboard({
 
     const starting = parseFloat(previewStartingBid) || 50;
 
-    const newItem: VintageItem = {
-      id: `item-${Date.now()}`,
-      title: previewAddTitle,
-      description: `Authentic archival designer ${previewCategory} with guaranteed measuring fitment, listed via FitCheck admin workspace. No mock bots. Genuine curation.`,
+    // Pick first registered seller if available
+    const firstSeller = booths[0];
+
+    const payload = {
+      title: previewAddTitle.trim(),
+      description: `Authentic archival designer ${previewCategory}. Listed via FitCheck admin workspace.`,
       category: previewCategory,
       era: "90s Archival",
-      condition: "Excellent (8/10 patina)",
+      condition: "Excellent",
       size: previewSize,
-      sellerId: "booth-1",
-      sellerName: "FitCheck Archival Core",
-      sellerAvatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&q=80",
-      marketName: "Shimokitazawa, Tokyo",
+      sellerId:     firstSeller?.id     || "admin",
+      sellerName:   firstSeller?.name   || "FitCheck",
+      sellerAvatar: firstSeller?.avatar || "",
+      marketName:   firstSeller?.location || "FitCheck HQ",
       imageUrl: uploadedImageUrl || "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=800&q=80",
       startingBid: starting,
-      currentBid: starting,
-      buyPrice: starting * 1.5,
-      bidsCount: 0,
-      highestBidder: null,
-      biddingEndsAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 3).toISOString(), // 3 days
-      isSold: false,
-      tags: ["curated", "archival", previewCategory.toLowerCase()]
+      buyPrice: Math.round(starting * 1.5),
+      biddingEndsAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 3).toISOString(),
+      tags: ["curated", previewCategory.toLowerCase()],
     };
 
-    const updated = [newItem, ...items];
-    setItems(updated);
-    persistState(updated, booths, bidLogs, purchasedItemIds);
-    setPreviewAddTitle("");
-    setUploadedImageUrl("");
-    setUploadError("");
-
-    // Sync cross tabs
-    safeLocalStorage.setItem("vintage_items_list", JSON.stringify(updated));
-    window.dispatchEvent(new Event("storage"));
-
-    showAdminToast(`✅ Successfully listed "${newItem.title}" live in the catalog!`);
+    setListingSaving(true);
+    try {
+      // Save to DB so every customer sees it
+      const { itemsApi, mapDbItem } = await import("../lib/api");
+      const saved = await itemsApi.create(payload);
+      const mapped = mapDbItem(saved);
+      const updated = [mapped as any, ...items];
+      setItems(updated);
+      setPreviewAddTitle("");
+      setUploadedImageUrl("");
+      setUploadError("");
+      showAdminToast(`✅ "${mapped.title}" listed and saved to database!`);
+    } catch (err: any) {
+      // Fallback to local if API fails
+      showAdminToast(`⚠ DB save failed (${err.message}) — item added locally only.`);
+      const localItem = {
+        id: `item-${Date.now()}`, ...payload,
+        currentBid: starting, bidsCount: 0, highestBidder: null, isSold: false,
+        measurements: {}, materials: [], history: "", bidDropped: false, bidDroppedReason: "",
+      } as any;
+      setItems(prev => [localItem, ...prev]);
+    } finally {
+      setListingSaving(false);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -764,10 +777,14 @@ export default function AdminDashboard({
 
             <button
               type="submit"
-              className="w-full py-2.5 bg-stone-900 dark:bg-stone-800 hover:bg-stone-950 dark:hover:bg-stone-700 text-white rounded font-bold text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-1"
+              disabled={listingSaving}
+              className="w-full py-2.5 bg-stone-900 dark:bg-stone-800 hover:bg-stone-950 dark:hover:bg-stone-700 text-white rounded font-bold text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-1 disabled:opacity-60"
             >
-              <Plus className="w-4 h-4 text-jumia-orange" />
-              Publish Live Listing
+              {listingSaving ? (
+                <><Loader2 className="w-4 h-4 animate-spin" />Saving to database…</>
+              ) : (
+                <><Plus className="w-4 h-4 text-jumia-orange" />Publish & Save to DB</>
+              )}
             </button>
           </form>
 

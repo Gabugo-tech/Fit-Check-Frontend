@@ -8,7 +8,6 @@ import type { VendorReview } from "./components/FeedbackModal";
 
 const VintageGrid = lazy(() => import("./components/VintageGrid"));
 const MarketDirectory = lazy(() => import("./components/MarketDirectory"));
-const LookbookShowcase = lazy(() => import("./components/LookbookShowcase"));
 const SellForm = lazy(() => import("./components/SellForm"));
 const ClosetHub = lazy(() => import("./components/ClosetHub"));
 const ItemDetailModal = lazy(() => import("./components/ItemDetailModal"));
@@ -17,14 +16,13 @@ const AuthModal = lazy(() => import("./components/AuthModal"));
 const VendorProfile = lazy(() => import("./components/VendorProfile"));
 const FeedbackModal = lazy(() => import("./components/FeedbackModal"));
 
-import { VintageItem, MarketBooth, BidRecord, Lookbook } from "./types";
-import { INITIAL_ITEMS, INITIAL_LOOKBOOKS } from "./data";
-import { Star, Shield, ShieldCheck, HelpCircle, Heart, Instagram, ShoppingBag, User, Search } from "lucide-react";
+import { VintageItem, MarketBooth, BidRecord } from "./types";
+import { INITIAL_LOOKBOOKS } from "./data";
+import { Star, Shield, ShieldCheck, Heart, Instagram, ShoppingBag, User, Search, Zap, Award, Truck } from "lucide-react";
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<string>("browse");
   const [booths, setBooths] = useState<MarketBooth[]>([]);
-  const [lookbooks, setLookbooks] = useState<Lookbook[]>([]);
   const [selectedBoothId, setSelectedBoothId] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<VintageItem | null>(null);
 
@@ -143,11 +141,6 @@ export default function App() {
       loadData();
     }
   };
-
-  // Lookbooks remain static for now; sellers come from the DB via useAppData
-  useEffect(() => {
-    setLookbooks(INITIAL_LOOKBOOKS);
-  }, []);
 
   // Keep booths state in sync with sellers from DB
   useEffect(() => {
@@ -282,7 +275,9 @@ export default function App() {
   });
 
   return (
-    <div className="min-h-screen bg-stone-50 text-stone-900 dark:bg-[#111110] dark:text-[#ECEAE4] font-sans flex flex-col transition-colors duration-200">
+    <div className={`min-h-screen font-sans flex flex-col transition-colors duration-200 ${
+      isDarkMode ? "bg-[#1f1f2d] text-[#e2e2f0]" : "bg-white text-[#1a1a2e]"
+    }`}>
       <div>
         <Navbar
           currentTab={currentTab}
@@ -301,48 +296,100 @@ export default function App() {
           onToggleDarkMode={handleToggleDarkMode}
         />
 
-        {/* Hero — only on browse, no active booth filter */}
-        {currentTab === "browse" && !selectedBoothId && items.length === 0 && !isLoading && (
-          <section className="bg-stone-900 text-white py-16 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-3xl mx-auto text-center space-y-5">
-              <h1 className="font-serif text-4xl sm:text-5xl font-bold italic leading-tight">
-                Rare vintage. <br />Real stories.
-              </h1>
-              <p className="text-stone-400 text-base max-w-xl mx-auto leading-relaxed">
-                Authenticated garments sourced from London, Tokyo, New York and Milan. Bid live or buy outright.
-              </p>
-              <div className="flex flex-wrap justify-center gap-3 pt-2">
-                {isGuest && (
-                  <button
-                    onClick={() => setIsAuthModalOpen(true)}
-                    className="px-6 py-3 bg-brand hover:bg-brand-hover text-white text-sm font-semibold rounded-xl transition-colors"
-                  >
-                    Create free account
-                  </button>
-                )}
-                <button
-                  onClick={() => setCurrentTab("browse")}
-                  className="px-6 py-3 border border-stone-700 hover:border-stone-500 text-stone-300 text-sm font-medium rounded-xl transition-colors"
-                >
-                  Browse collection
-                </button>
+        {/* ── Enhanced Hero — always visible on browse tab ── */}
+        {currentTab === "browse" && !selectedBoothId && (
+          <section className="relative overflow-hidden" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                <div className="text-white space-y-6">
+                  <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white text-xs font-semibold px-3 py-1.5 rounded-full border border-white/30">
+                    <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                    Authenticated Vintage Marketplace
+                  </div>
+                  <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight italic">
+                    Rare pieces.<br />
+                    <span className="text-yellow-300">Real stories.</span>
+                  </h1>
+                  <p className="text-white/80 text-lg max-w-md leading-relaxed">
+                    Authenticated vintage garments sourced from London, Tokyo, New York and Milan. Bid live or buy outright.
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      onClick={() => { const el = document.getElementById("shop-section"); el?.scrollIntoView({ behavior: "smooth" }); }}
+                      className="px-6 py-3 bg-white text-[#667eea] font-bold text-sm rounded-xl hover:bg-gray-50 transition-colors flex items-center gap-2 shadow-lg"
+                    >
+                      <ShoppingBag className="w-4 h-4" />
+                      Shop Collection
+                    </button>
+                    {isGuest && (
+                      <button
+                        onClick={() => setIsAuthModalOpen(true)}
+                        className="px-6 py-3 border-2 border-white/60 text-white font-semibold text-sm rounded-xl hover:bg-white/10 transition-colors flex items-center gap-2"
+                      >
+                        <User className="w-4 h-4" />
+                        Create Account
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-x-6 gap-y-2 pt-2 text-white/70 text-sm">
+                    <span className="flex items-center gap-1.5"><ShieldCheck className="w-4 h-4 text-green-300" />Provenance verified</span>
+                    <span className="flex items-center gap-1.5"><Star className="w-4 h-4 text-yellow-300 fill-yellow-300" />Flat measurements</span>
+                    <span className="flex items-center gap-1.5"><Truck className="w-4 h-4 text-blue-300" />Insured dispatch</span>
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div className="hidden lg:grid grid-cols-2 gap-4">
+                  {[
+                    { value: `${items.length || "500"}+`, label: "Archive pieces", icon: "👗" },
+                    { value: "4", label: "Global cities", icon: "🌍" },
+                    { value: "Live", label: "Real-time bidding", icon: "⚡" },
+                    { value: "100%", label: "Authenticated", icon: "✅" },
+                  ].map(({ value, label, icon }) => (
+                    <div key={label} className="bg-white/15 backdrop-blur-sm rounded-2xl p-5 border border-white/20 text-white">
+                      <div className="text-3xl mb-1">{icon}</div>
+                      <div className="text-2xl font-bold">{value}</div>
+                      <div className="text-white/70 text-sm">{label}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="flex flex-wrap justify-center gap-x-8 gap-y-2 pt-3 text-xs text-stone-500">
-                <span>✓ Provenance verified</span>
-                <span>✓ Flat measurements on every listing</span>
-                <span>✓ Secure checkout</span>
-              </div>
+            </div>
+
+            {/* Decorative wave */}
+            <div className="absolute bottom-0 left-0 right-0">
+              <svg viewBox="0 0 1440 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M0 60L1440 60L1440 0C1200 50 960 60 720 40C480 20 240 0 0 30L0 60Z" fill={isDarkMode ? "#1f1f2d" : "#ffffff"}/>
+              </svg>
             </div>
           </section>
         )}
 
-        {/* Guest notice banner */}
-        {isGuest && items.length > 0 && (
-          <div className="bg-amber-50 border-b border-amber-200 text-amber-800 text-sm py-2.5 px-4 text-center">
-            <button onClick={() => setIsAuthModalOpen(true)} className="font-semibold hover:underline">
-              Sign in
-            </button>{" "}
-            to save items, place bids and checkout
+        {/* ── Features strip ── */}
+        {currentTab === "browse" && !selectedBoothId && (
+          <div className={`border-b ${isDarkMode ? "border-[#3d3d5c] bg-[#2a2a3c]" : "border-gray-100 bg-white"}`}>
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+              <div className="flex flex-wrap justify-center gap-8 text-sm">
+                {[
+                  { icon: <Truck className="w-4 h-4 text-[#667eea]" />, text: "Free shipping on orders over ₦50,000" },
+                  { icon: <ShieldCheck className="w-4 h-4 text-green-500" />, text: "100% authentic, provenance verified" },
+                  { icon: <Zap className="w-4 h-4 text-yellow-500" />, text: "Live bidding in real time" },
+                  { icon: <Award className="w-4 h-4 text-[#ff6b6b]" />, text: "9,000+ satisfied customers" },
+                ].map(({ icon, text }) => (
+                  <span key={text} className={`flex items-center gap-2 ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>
+                    {icon}{text}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Guest notice */}
+        {isGuest && items.length > 0 && currentTab === "browse" && (
+          <div className="bg-indigo-50 border-b border-indigo-200 text-indigo-800 text-sm py-2.5 px-4 text-center">
+            <button onClick={() => setIsAuthModalOpen(true)} className="font-semibold hover:underline">Sign in</button>
+            {" "}to save items, place bids and checkout
           </div>
         )}
 
@@ -352,7 +399,7 @@ export default function App() {
             Loading…
           </div>
         }>
-          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 dark:bg-[#111110]">
+          <main id="shop-section" className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 ${isDarkMode ? "bg-[#1f1f2d]" : "bg-white"}`}>
           {currentTab === "browse" && (
             filteredItems.length > 0 ? (
               <VintageGrid
@@ -444,11 +491,10 @@ export default function App() {
           )}
 
           {currentTab === "lookbooks" && (
-            <LookbookShowcase
-              lookbooks={lookbooks}
-              items={items}
-              onSelectItem={(item) => setSelectedItem(item)}
-            />
+            <div className="text-center py-24">
+              <p className="text-2xl mb-3">📚</p>
+              <h3 className="text-xl font-semibold">Lookbooks coming soon</h3>
+            </div>
           )}
 
           {currentTab === "sell" && (
@@ -560,14 +606,12 @@ export default function App() {
         )}
       </Suspense>
 
-      {/* Footer */}
-      <footer className="bg-stone-900 text-stone-400 mt-20 border-t border-stone-800">
+      <footer style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #2d2d4e 100%)" }} className="text-gray-400 mt-20 border-t border-indigo-900/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-10 border-b border-stone-800">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-10 border-b border-indigo-900/30">
             <div className="md:col-span-1">
-              <div className="flex items-center gap-1.5 mb-3">
-                <span className="bg-brand text-white px-2.5 py-1 rounded-md font-extrabold text-base">Fit</span>
-                <span className="font-serif font-bold text-base italic text-white">Check</span>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="font-bold text-xl text-white" style={{ background: "linear-gradient(135deg, #667eea, #764ba2)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>FitCheck</span>
               </div>
               <p className="text-sm leading-relaxed">
                 Authenticated vintage clothing marketplace. Every piece verified, measured and sourced.
@@ -578,7 +622,6 @@ export default function App() {
               <ul className="space-y-2 text-sm">
                 <li><button onClick={() => setCurrentTab("browse")} className="hover:text-white transition-colors">All items</button></li>
                 <li><button onClick={() => setCurrentTab("markets")} className="hover:text-white transition-colors">Sellers</button></li>
-                <li><button onClick={() => setCurrentTab("lookbooks")} className="hover:text-white transition-colors">Lookbooks</button></li>
               </ul>
             </div>
             <div>
@@ -591,7 +634,7 @@ export default function App() {
               </ul>
             </div>
             <div>
-              <h4 className="text-white text-sm font-semibold mb-3">Trust</h4>
+              <h4 className="text-white text-sm font-semibold mb-3">Trust & Safety</h4>
               <ul className="space-y-2 text-sm">
                 <li>✓ Provenance verified</li>
                 <li>✓ Flat measurements</li>
@@ -602,7 +645,7 @@ export default function App() {
           </div>
           <div className="pt-6 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs">
             <p>© {new Date().getFullYear()} FitCheck. All rights reserved.</p>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2 text-indigo-400">
               <Instagram className="w-4 h-4" />
               <span>@fitcheck_vintage</span>
             </div>

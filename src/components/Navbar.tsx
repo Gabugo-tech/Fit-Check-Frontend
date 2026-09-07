@@ -34,10 +34,9 @@ const SUGGESTIONS = [
 ];
 
 const NAV_TABS = [
-  { id: "browse",    label: "Shop",        icon: Shirt },
-  { id: "markets",   label: "Sellers",     icon: Store },
-  { id: "lookbooks", label: "Lookbooks",   icon: Sparkles },
-  { id: "closet",    label: "My Orders",   icon: Package },
+  { id: "browse",  label: "Shop",      icon: Shirt },
+  { id: "markets", label: "Sellers",   icon: Store },
+  { id: "closet",  label: "My Orders", icon: Package },
 ];
 
 export default function Navbar({
@@ -116,11 +115,8 @@ export default function Navbar({
           className="shrink-0 flex items-center gap-1.5 select-none"
           aria-label="FitCheck home"
         >
-          <span className="bg-brand text-white px-2.5 py-1 rounded-md font-extrabold text-lg tracking-tight leading-none">
-            Fit
-          </span>
-          <span className="font-serif font-bold text-lg italic text-stone-900 leading-none -ml-0.5">
-            Check
+          <span className="font-bold text-xl text-white px-2.5 py-1 rounded-lg" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
+            FitCheck
           </span>
         </button>
 

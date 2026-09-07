@@ -6,21 +6,44 @@
   --font-serif: "Playfair Display", ui-serif, Georgia, serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 
-  /* FitCheck brand palette */
-  --color-brand:        #E8631A;
-  --color-brand-hover:  #C9520E;
-  --color-brand-light:  #FEF0E7;
-  --color-surface:      #FAFAF9;
-  --color-surface-alt:  #F4F3F0;
-  --color-border:       #E5E3DE;
-  --color-text:         #1A1917;
-  --color-text-muted:   #6B6760;
+  /* ── FitCheck brand palette (inspired by Gaby Classy Collection) ── */
+  --color-brand:          #667eea;   /* primary purple */
+  --color-brand-hover:    #5a6fd6;
+  --color-brand-dark:     #764ba2;   /* deep violet */
+  --color-accent:         #ff6b6b;   /* coral red */
+  --color-accent-hover:   #ff5252;
 
-  /* Legacy aliases so existing code keeps working */
-  --color-jumia-orange:       #E8631A;
-  --color-jumia-orange-hover: #C9520E;
-  --color-jumia-dark:         #1A1917;
-  --color-jumia-bg:           #F4F3F0;
+  /* Light mode surfaces */
+  --color-bg:             #ffffff;
+  --color-bg-alt:         #f8f8fc;
+  --color-surface:        #ffffff;
+  --color-surface-alt:    #f0f4ff;
+  --color-border:         #e2e8f0;
+  --color-text:           #1a1a2e;
+  --color-text-muted:     #64748b;
+
+  /* Dark mode surfaces */
+  --color-bg-dark:        #1f1f2d;
+  --color-surface-dark:   #2a2a3c;
+  --color-border-dark:    #3d3d5c;
+  --color-text-dark:      #e2e2f0;
+
+  /* Legacy aliases */
+  --color-jumia-orange:       #667eea;
+  --color-jumia-orange-hover: #5a6fd6;
+  --color-jumia-dark:         #1a1a2e;
+  --color-jumia-bg:           #f0f4ff;
+}
+
+/* ── Base ─────────────────────────────────────────────── */
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+html.dark body {
+  background-color: var(--color-bg-dark);
+  color: var(--color-text-dark);
 }
 
 /* ── Utilities ────────────────────────────────────────── */
@@ -51,18 +74,36 @@
 
 /* ── Scrollbar ────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: #F4F3F0; }
-::-webkit-scrollbar-thumb { background: #D1CFC8; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #B8B5AD; }
+::-webkit-scrollbar-track { background: #f0f4ff; }
+::-webkit-scrollbar-thumb { background: #c7d2fe; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #a5b4fc; }
 
 /* ── Dark Mode ────────────────────────────────────────── */
 html.dark {
-  background-color: #111110;
-  color: #ECEAE4;
+  background-color: #1f1f2d;
+  color: #e2e2f0;
 }
-html.dark ::-webkit-scrollbar-track  { background: #1A1917; }
-html.dark ::-webkit-scrollbar-thumb  { background: #3A3833; }
-html.dark ::-webkit-scrollbar-thumb:hover { background: #4D4A44; }
+html.dark ::-webkit-scrollbar-track  { background: #2a2a3c; }
+html.dark ::-webkit-scrollbar-thumb  { background: #4c4c6d; }
+html.dark ::-webkit-scrollbar-thumb:hover { background: #667eea; }
+
+/* ── Dark mode component overrides ───────────────────── */
+html.dark .bg-white { background-color: #2a2a3c !important; }
+html.dark .bg-stone-50 { background-color: #1f1f2d !important; }
+html.dark .bg-stone-100 { background-color: #2a2a3c !important; }
+html.dark .border-stone-200 { border-color: #3d3d5c !important; }
+html.dark .border-stone-100 { border-color: #333352 !important; }
+html.dark .text-stone-900 { color: #e2e2f0 !important; }
+html.dark .text-stone-800 { color: #d4d4e8 !important; }
+html.dark .text-stone-700 { color: #b8b8d4 !important; }
+html.dark .text-stone-600 { color: #a0a0c0 !important; }
+html.dark .text-stone-500 { color: #8888a8 !important; }
+html.dark .text-stone-400 { color: #6e6e90 !important; }
+
+/* ── Gradient hero utility ────────────────────────────── */
+.brand-gradient {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
 
 /* ── Line clamp ───────────────────────────────────────── */
 .line-clamp-2 {
