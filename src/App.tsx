@@ -533,6 +533,7 @@ export default function App() {
               onClearPurchases={handleClearPurchases}
               wishlist={wishlist}
               currentUserName={userName}
+              isAdmin={isAdmin}
             />
           )}
 

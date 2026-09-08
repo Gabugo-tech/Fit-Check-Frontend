@@ -11,9 +11,10 @@ interface ClosetHubProps {
   onClearPurchases: () => void;
   wishlist: string[];
   currentUserName?: string;
+  isAdmin?: boolean;
 }
 
-export default function ClosetHub({ items, bidLogs, purchasedItemIds, onSelectItem, onClearPurchases, wishlist, currentUserName }: ClosetHubProps) {
+export default function ClosetHub({ items, bidLogs, purchasedItemIds, onSelectItem, onClearPurchases, wishlist, currentUserName, isAdmin = false }: ClosetHubProps) {
   const [userName, setUserName] = useState(currentUserName || "Anonymous Archivist");
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInputValue, setNameInputValue] = useState(currentUserName || "");
@@ -205,7 +206,8 @@ export default function ClosetHub({ items, bidLogs, purchasedItemIds, onSelectIt
 
       </div>
 
-      {/* Custom listings manager */}
+      {/* Custom listings manager — admin only */}
+      {isAdmin && (
       <div className="bg-[#FCFBF8] border border-[#EBE8DF] p-6 sm:p-8 rounded-2xl shadow-sm space-y-4">
         <h3 className="font-serif text-lg font-bold text-[#1C1A17] pb-3 border-b border-[#EBE8DF] flex items-center gap-2">
           <Store className="w-5 h-5 text-amber-700" />
@@ -236,11 +238,12 @@ export default function ClosetHub({ items, bidLogs, purchasedItemIds, onSelectIt
           </div>
         ) : (
           <div className="text-center py-10 text-[#877F70] border border-dashed border-[#EBE8DF] rounded-xl max-w-lg mx-auto">
-            <p className="text-xs">You have not uploaded any custom clothes yet.</p>
-            <p className="text-[10px] text-stone-400 mt-1">Use the upload lounges to catalog new curated inventory pieces.</p>
+            <p className="text-xs">No custom listings yet.</p>
+            <p className="text-[10px] text-stone-400 mt-1">Use the Admin Dashboard to add new items.</p>
           </div>
         )}
       </div>
+      )}
 
     </div>
   );

@@ -98,18 +98,20 @@ export default function AdminDashboard({
   // Estimated greenhouse carbon offset (each garment prevents ~14.2kg CO2e)
   const totalCarbonOffset = (totalListings * 14.2).toFixed(1);
 
-  // Take down a listing from the collection immediately
-  const handleTakedownListing = (itemId: string) => {
-    const updated = items.filter(item => item.id !== itemId);
-    setItems(updated);
-    persistState(updated, booths, bidLogs, purchasedItemIds);
-
-    // Trigger cross-tab multi window sync instantly
-    safeLocalStorage.setItem("vintage_items_list", JSON.stringify(updated));
-    window.dispatchEvent(new Event("storage"));
-    
-    // Clear deletion state
-    setConfirmingDeleteId(null);
+  const triggerRandomPriceCut = async () => {
+    const unsold = items.filter(i => !i.isSold);
+    if (unsold.length === 0) { showAdminToast("⚠ No unsold items to apply a price cut to."); return; }
+    const target = unsold[Math.floor(Math.random() * unsold.length)];
+    const cutPrice = Math.floor(target.currentBid * 0.85);
+    try {
+      const { itemsApi, mapDbItem } = await import("../lib/api");
+      const updated = await itemsApi.update(target.id, { currentBid: cutPrice, buyPrice: cutPrice, bidDropped: true, bidDroppedReason: "15% price cut applied by admin" });
+      const mapped = mapDbItem(updated);
+      setItems(prev => prev.map(i => i.id === target.id ? { ...i, ...mapped } : i));
+      showAdminToast(`✅ 15% price cut on "${target.title}" (₦${target.currentBid.toLocaleString()} → ₦${cutPrice.toLocaleString()})`);
+    } catch (err: any) {
+      showAdminToast(`❌ Price cut failed: ${err.message}`);
+    }
   };
 
   // Start editing a listing price or bid dropped status
@@ -120,68 +122,42 @@ export default function AdminDashboard({
     setPriceCutReason(item.bidDroppedReason || "Premium discount applied by FitCheck Administrator");
   };
 
-  // Save edits (Apply a real-time price cut or titling correction)
-  const handleSaveEdits = (itemId: string) => {
+  // Save edits — calls API to persist to DB and reloads items
+  const handleSaveEdits = async (itemId: string) => {
     const parsedPrice = parseFloat(editedPrice);
     if (isNaN(parsedPrice) || parsedPrice <= 0) {
       showAdminToast("⚠ Please specify a valid numeric listing price.");
       return;
     }
-
-    const updated = items.map(item => {
-      if (item.id === itemId) {
-        const isBiggerPriceCut = parsedPrice < item.currentBid;
-        return {
-          ...item,
-          title: editedTitle,
-          currentBid: parsedPrice,
-          bidDropped: isBiggerPriceCut ? true : item.bidDropped,
-          bidDroppedReason: isBiggerPriceCut ? priceCutReason : item.bidDroppedReason
-        };
-      }
-      return item;
-    });
-
-    setItems(updated);
-    persistState(updated, booths, bidLogs, purchasedItemIds);
-    setEditingItemId(null);
-
-    // Sync tab storages
-    safeLocalStorage.setItem("vintage_items_list", JSON.stringify(updated));
-    window.dispatchEvent(new Event("storage"));
+    try {
+      const { itemsApi, mapDbItem } = await import("../lib/api");
+      const updated = await itemsApi.update(itemId, {
+        title: editedTitle,
+        currentBid: parsedPrice,
+        buyPrice: parsedPrice,
+        bidDroppedReason: priceCutReason,
+      });
+      const mapped = mapDbItem(updated);
+      setItems(prev => prev.map(i => i.id === itemId ? { ...i, ...mapped } : i));
+      setEditingItemId(null);
+      showAdminToast(`✅ "${mapped.title}" updated in database.`);
+    } catch (err: any) {
+      showAdminToast(`❌ Update failed: ${err.message}`);
+    }
   };
 
-  // Force trigger simulated organic pricing cut (helpful for customer friendliness test simulation)
-  const triggerRandomPriceCut = () => {
-    const unsold = items.filter(i => !i.isSold && !i.bidDropped);
-    if (unsold.length === 0) {
-      showAdminToast("⚠ No available unsold items to price cut currently!");
-      return;
+  // Delete listing — calls API to remove from DB
+  const handleTakedownListing = async (itemId: string) => {
+    try {
+      const { itemsApi } = await import("../lib/api");
+      await itemsApi.delete(itemId);
+      setItems(prev => prev.filter(i => i.id !== itemId));
+      setConfirmingDeleteId(null);
+      showAdminToast("✅ Item deleted from database.");
+    } catch (err: any) {
+      showAdminToast(`❌ Delete failed: ${err.message}`);
+      setConfirmingDeleteId(null);
     }
-    const targetItem = unsold[Math.floor(Math.random() * unsold.length)];
-    const originalPrice = targetItem.currentBid;
-    const cutPrice = Math.floor(originalPrice * 0.85); // 15% drop
-
-    const updated = items.map(item => {
-      if (item.id === targetItem.id) {
-        return {
-          ...item,
-          currentBid: cutPrice,
-          bidDropped: true,
-          bidDroppedReason: "💥 ADMIN FLASH DISPATCH: Authorized 15% Price Cut applied by FitCheck Admin!"
-        };
-      }
-      return item;
-    });
-
-    setItems(updated);
-    persistState(updated, booths, bidLogs, purchasedItemIds);
-
-    // Sync localStorage
-    safeLocalStorage.setItem("vintage_items_list", JSON.stringify(updated));
-    window.dispatchEvent(new Event("storage"));
-
-    showAdminToast(`✅ Applied 15% Price Cut on: "${targetItem.title}" (₦${originalPrice.toLocaleString()} → ₦${cutPrice.toLocaleString()})`);
   };
 
   // ── Add item prop so we can reload after DB save ─────────────────────────
@@ -213,7 +189,7 @@ export default function AdminDashboard({
       marketName:   firstSeller?.location || "FitCheck HQ",
       imageUrl: uploadedImageUrl || "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=800&q=80",
       startingBid: starting,
-      buyPrice: Math.round(starting * 1.5),
+      buyPrice: starting, // price = what admin sets, no markup
       biddingEndsAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 3).toISOString(),
       tags: ["curated", previewCategory.toLowerCase()],
     };

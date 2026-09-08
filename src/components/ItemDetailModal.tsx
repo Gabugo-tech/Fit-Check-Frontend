@@ -31,7 +31,7 @@ export default function ItemDetailModal({
   item, onClose, onPlaceBid, onBuyNow,
   bidLogs, wishlist = [], onToggleWishlist,
 }: ItemDetailModalProps) {
-  const [mode, setMode]                 = useState<"bid" | "buy">("bid");
+  const [mode, setMode]                 = useState<"cart" | "buy">("buy");
   const [buyerName, setBuyerName]       = useState("");
   const [bidAmount, setBidAmount]       = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -47,7 +47,7 @@ export default function ItemDetailModal({
     setBuyerName(name);
     setBidAmount((item.currentBid || item.startingBid || 0) + 10);
     setBidSuccess(""); setBuySuccess(""); setError("");
-    setMode("bid");
+    setMode("buy");
   }, [item?.id]);
 
   // Close on Escape
@@ -81,12 +81,11 @@ export default function ItemDetailModal({
     e.preventDefault();
     setError("");
     if (!buyerName.trim()) { setError("Please enter your name."); return; }
-    if (bidAmount < minBid) { setError(`Minimum bid is ₦${minBid.toLocaleString()}.`); return; }
     setIsProcessing(true);
     setTimeout(() => {
-      onPlaceBid(item.id, bidAmount, buyerName.trim());
+      onBuyNow(item.id, buyerName.trim());
       safeLocalStorage.setItem("vintage_bidder_name", buyerName.trim());
-      setBidSuccess(`Your bid of ₦${bidAmount.toLocaleString()} was placed successfully!`);
+      setBidSuccess(`₦${price.toLocaleString()} — ${buyerName.trim()}`);
       setIsProcessing(false);
     }, 800);
   };
@@ -269,14 +268,8 @@ export default function ItemDetailModal({
               <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-start gap-3">
                 <CheckCircle className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-emerald-800 text-sm">Bid placed!</p>
+                  <p className="font-semibold text-emerald-800 text-sm">Added to cart!</p>
                   <p className="text-sm text-emerald-700 mt-0.5">{bidSuccess}</p>
-                  <button
-                    onClick={() => { setBidSuccess(""); setBidAmount(bidAmount + 10); }}
-                    className="mt-2 text-xs text-emerald-700 font-semibold hover:underline"
-                  >
-                    Place a higher bid
-                  </button>
                 </div>
               </div>
             ) : (
@@ -284,12 +277,12 @@ export default function ItemDetailModal({
                 {/* Mode toggle */}
                 <div className="grid grid-cols-2 gap-1 p-1 bg-stone-100 rounded-xl">
                   <button
-                    onClick={() => { setMode("bid"); setError(""); }}
+                    onClick={() => { setMode("cart"); setError(""); }}
                     className={`py-2 rounded-lg text-sm font-semibold transition-colors ${
-                      mode === "bid" ? "bg-white text-stone-900 shadow-sm" : "text-stone-500 hover:text-stone-700"
+                      mode === "cart" ? "bg-white text-stone-900 shadow-sm" : "text-stone-500 hover:text-stone-700"
                     }`}
                   >
-                    Place a bid
+                    🛒 Add to Cart
                   </button>
                   <button
                     onClick={() => { setMode("buy"); setError(""); }}
@@ -314,59 +307,17 @@ export default function ItemDetailModal({
                   />
                 </div>
 
-                {mode === "bid" && (
+                {mode === "cart" && (
                   <form onSubmit={handleBid} className="space-y-3">
-                    {/* Current bid info */}
+                    {/* Price info */}
                     <div className="bg-stone-50 rounded-xl p-3 flex items-center justify-between">
                       <div>
-                        <p className="text-xs text-stone-500">Current highest bid</p>
-                        <p className="font-bold text-stone-900">₦{(item.currentBid || item.startingBid || 0).toLocaleString()}</p>
+                        <p className="text-xs text-stone-500">Item price</p>
+                        <p className="font-bold text-stone-900">₦{price.toLocaleString()}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-xs text-stone-500">Your minimum</p>
-                        <p className="font-bold text-brand">₦{minBid.toLocaleString()}</p>
-                      </div>
-                    </div>
-
-                    {/* Bid amount */}
-                    <div>
-                      <label className="block text-xs font-medium text-stone-600 mb-1.5">Your bid (₦)</label>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setBidAmount(a => Math.max(minBid, a - 10))}
-                          className="w-10 h-10 rounded-lg border border-stone-200 flex items-center justify-center text-stone-600 hover:bg-stone-50"
-                        >
-                          <ChevronDown className="w-4 h-4" />
-                        </button>
-                        <input
-                          type="number"
-                          value={bidAmount}
-                          onChange={e => setBidAmount(Number(e.target.value))}
-                          min={minBid}
-                          disabled={isProcessing}
-                          className="flex-1 border border-stone-200 rounded-lg py-2.5 px-3 text-sm font-bold text-stone-900 text-center outline-none focus:border-brand transition-colors"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setBidAmount(a => a + 10)}
-                          className="w-10 h-10 rounded-lg border border-stone-200 flex items-center justify-center text-stone-600 hover:bg-stone-50"
-                        >
-                          <ChevronUp className="w-4 h-4" />
-                        </button>
-                      </div>
-                      {/* Quick increments */}
-                      <div className="flex gap-2 mt-2">
-                        {[50, 100, 250, 500].map(inc => (
-                          <button
-                            key={inc}
-                            type="button"
-                            onClick={() => setBidAmount((item.currentBid || item.startingBid || 0) + inc)}
-                            className="flex-1 py-1.5 text-xs font-medium border border-stone-200 rounded-lg hover:bg-stone-50 text-stone-600 transition-colors"
-                          >
-                            +₦{inc}
-                          </button>
-                        ))}
+                        <p className="text-xs text-stone-500">Size</p>
+                        <p className="font-bold text-stone-900">{item.size}</p>
                       </div>
                     </div>
 
@@ -378,9 +329,9 @@ export default function ItemDetailModal({
                       className="w-full py-3 bg-stone-900 hover:bg-stone-800 text-white text-sm font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
                     >
                       {isProcessing ? (
-                        <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Placing bid…</>
+                        <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Adding to cart…</>
                       ) : (
-                        <><Send className="w-4 h-4" />Place bid · ₦{bidAmount.toLocaleString()}</>
+                        <><ShoppingBag className="w-4 h-4" />Add to Cart · ₦{price.toLocaleString()}</>
                       )}
                     </button>
                   </form>

@@ -27,13 +27,21 @@ async function request<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const res = await fetch(`${BASE}/api${path}`, {
-    ...options,
-    headers: { ...authHeaders(), ...(options.headers || {}) },
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
-  return data as T;
+  try {
+    const res = await fetch(`${BASE}/api${path}`, {
+      ...options,
+      headers: { ...authHeaders(), ...(options.headers || {}) },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `Something went wrong. Please try again.`);
+    return data as T;
+  } catch (err: any) {
+    // Convert "Failed to fetch" / network errors to user-friendly messages
+    if (err.message === "Failed to fetch" || err.name === "TypeError") {
+      throw new Error("Unable to connect. Please check your internet connection and try again.");
+    }
+    throw err;
+  }
 }
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
