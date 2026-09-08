@@ -120,6 +120,28 @@ export const bidsApi = {
     request<any>("/bids", { method: "POST", body: JSON.stringify(data) }),
 };
 
+// ─── Cart ─────────────────────────────────────────────────────────────────────
+export const cartApi = {
+  get: () => request<any[]>("/purchases?type=cart"),
+
+  add: (itemId: string) =>
+    request<any>("/purchases?type=cart", { method: "POST", body: JSON.stringify({ itemId }) }),
+
+  remove: (itemId: string) =>
+    request<{ ok: boolean }>(`/purchases?type=cart&itemId=${itemId}`, { method: "DELETE" }),
+};
+
+// ─── Orders ──────────────────────────────────────────────────────────────────
+export const ordersApi = {
+  getAll: () => request<any[]>("/purchases?type=order"),
+
+  place: (data: { itemId: string; buyerName: string; address?: string; notes?: string }) =>
+    request<any>("/purchases?type=order", { method: "POST", body: JSON.stringify(data) }),
+
+  updateStatus: (orderId: string, status: "pending" | "confirmed" | "shipped" | "delivered" | "cancelled") =>
+    request<any>(`/purchases?type=order&id=${orderId}`, { method: "PATCH", body: JSON.stringify({ status }) }),
+};
+
 // ─── Purchases ───────────────────────────────────────────────────────────────
 export const purchasesApi = {
   getAll: () => request<any[]>("/purchases"),

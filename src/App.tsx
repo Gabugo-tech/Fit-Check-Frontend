@@ -2,22 +2,23 @@ import React, { useState, useEffect, Suspense, lazy } from "react";
 import Navbar from "./components/Navbar";
 import { emailNotificationService } from "./lib/emailNotificationService";
 import { safeLocalStorage } from "./lib/storage";
-import { tokenStore, reviewsApi } from "./lib/api";
+import { tokenStore, cartApi } from "./lib/api";
 import { useAppData } from "./lib/useAppData";
 import type { VendorReview } from "./components/FeedbackModal";
 
-const VintageGrid = lazy(() => import("./components/VintageGrid"));
+const VintageGrid    = lazy(() => import("./components/VintageGrid"));
 const MarketDirectory = lazy(() => import("./components/MarketDirectory"));
-const SellForm = lazy(() => import("./components/SellForm"));
-const ClosetHub = lazy(() => import("./components/ClosetHub"));
+const SellForm       = lazy(() => import("./components/SellForm"));
+const ClosetHub      = lazy(() => import("./components/ClosetHub"));
 const ItemDetailModal = lazy(() => import("./components/ItemDetailModal"));
-const AdminDashboard = lazy(() => import("./components/AdminDashboard"));
-const AuthModal = lazy(() => import("./components/AuthModal"));
-const VendorProfile = lazy(() => import("./components/VendorProfile"));
-const FeedbackModal = lazy(() => import("./components/FeedbackModal"));
+const AdminDashboard  = lazy(() => import("./components/AdminDashboard"));
+const AuthModal       = lazy(() => import("./components/AuthModal"));
+const VendorProfile   = lazy(() => import("./components/VendorProfile"));
+const FeedbackModal   = lazy(() => import("./components/FeedbackModal"));
+const CartDrawer      = lazy(() => import("./components/CartDrawer"));
+const OrdersPage      = lazy(() => import("./components/OrdersPage"));
 
 import { VintageItem, MarketBooth, BidRecord } from "./types";
-import { INITIAL_LOOKBOOKS } from "./data";
 import { Star, Shield, ShieldCheck, Heart, Instagram, ShoppingBag, User, Search, Zap, Award, Truck } from "lucide-react";
 
 export default function App() {
@@ -43,7 +44,9 @@ export default function App() {
     safeLocalStorage.getItem("user_phone") || ""
   );
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [isCartOpen, setIsCartOpen]           = useState(false);
+  const [cartCount, setCartCount]             = useState(0);
+  const [searchQuery, setSearchQuery]         = useState<string>("");
 
   // Dark mode
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() =>
@@ -153,7 +156,27 @@ export default function App() {
       setAllReviews(stored ? JSON.parse(stored) : []);
     } catch { setAllReviews([]); }
   }, [usingBackend]);
-  // ── Handlers ─────────────────────────────────────────────────────────────
+  // ── Cart handler ─────────────────────────────────────────────────────────
+  const handleAddToCart = async (itemId: string) => {
+    if (isGuest) { setIsAuthModalOpen(true); return; }
+    try {
+      await cartApi.add(itemId);
+      setCartCount(c => c + 1);
+      setIsCartOpen(true);
+    } catch (err: any) {
+      console.error("Add to cart failed:", err.message);
+    }
+  };
+
+  // Load cart count on auth
+  useEffect(() => {
+    if (!isGuest) {
+      cartApi.get().then(items => setCartCount(items.length)).catch(() => {});
+    } else {
+      setCartCount(0);
+    }
+  }, [isGuest]);
+
   const handleToggleWishlist = async (itemId: string) => {
     try {
       await apiToggleWishlist(itemId);
@@ -284,6 +307,8 @@ export default function App() {
           setCurrentTab={setCurrentTab}
           activeBidCount={activeBidCount}
           wishlistCount={wishlist.length}
+          cartCount={cartCount}
+          onOpenCart={() => setIsCartOpen(true)}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
           userEmail={userEmail}
@@ -524,6 +549,12 @@ export default function App() {
             )
           )}
 
+          {currentTab === "orders" && (
+            <Suspense fallback={<div className="py-20 text-center text-stone-400">Loading orders…</div>}>
+              <OrdersPage />
+            </Suspense>
+          )}
+
           {currentTab === "closet" && (
             <ClosetHub
               items={items}
@@ -562,6 +593,7 @@ export default function App() {
             onClose={() => setSelectedItem(null)}
             onPlaceBid={handlePlaceBid}
             onBuyNow={handleBuyNow}
+            onAddToCart={handleAddToCart}
             bidLogs={bidLogs}
             wishlist={wishlist}
             onToggleWishlist={handleToggleWishlist}
@@ -605,6 +637,16 @@ export default function App() {
             }}
           />
         )}
+      </Suspense>
+
+      {/* Cart Drawer */}
+      <Suspense fallback={null}>
+        <CartDrawer
+          isOpen={isCartOpen}
+          onClose={() => setIsCartOpen(false)}
+          onOrderPlaced={() => { setCartCount(0); setCurrentTab("orders"); }}
+          userName={userName}
+        />
       </Suspense>
 
       <footer style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #2d2d4e 100%)" }} className="text-gray-400 mt-20 border-t border-indigo-900/30">

@@ -13,6 +13,7 @@ interface ItemDetailModalProps {
   onClose: () => void;
   onPlaceBid: (itemId: string, amount: number, bidderName: string) => void;
   onBuyNow: (itemId: string, buyerName: string) => void;
+  onAddToCart?: (itemId: string) => void;
   bidLogs: BidRecord[];
   wishlist?: string[];
   onToggleWishlist?: (itemId: string) => void;
@@ -28,7 +29,7 @@ function getCountdown(endStr: string) {
 }
 
 export default function ItemDetailModal({
-  item, onClose, onPlaceBid, onBuyNow,
+  item, onClose, onPlaceBid, onBuyNow, onAddToCart,
   bidLogs, wishlist = [], onToggleWishlist,
 }: ItemDetailModalProps) {
   const [mode, setMode]                 = useState<"cart" | "buy">("buy");
@@ -82,12 +83,19 @@ export default function ItemDetailModal({
     setError("");
     if (!buyerName.trim()) { setError("Please enter your name."); return; }
     setIsProcessing(true);
-    setTimeout(() => {
-      onBuyNow(item.id, buyerName.trim());
-      safeLocalStorage.setItem("vintage_bidder_name", buyerName.trim());
-      setBidSuccess(`₦${price.toLocaleString()} — ${buyerName.trim()}`);
+    // Use onAddToCart if available (e-commerce mode), else fall back to onBuyNow
+    if (onAddToCart) {
+      onAddToCart(item.id);
+      setBidSuccess(`Added to cart! ₦${price.toLocaleString()}`);
       setIsProcessing(false);
-    }, 800);
+    } else {
+      setTimeout(() => {
+        onBuyNow(item.id, buyerName.trim());
+        safeLocalStorage.setItem("vintage_bidder_name", buyerName.trim());
+        setBidSuccess(`₦${price.toLocaleString()} — ${buyerName.trim()}`);
+        setIsProcessing(false);
+      }, 800);
+    }
   };
 
   const handleBuy = (e: React.FormEvent) => {

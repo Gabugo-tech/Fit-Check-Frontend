@@ -10,6 +10,8 @@ interface NavbarProps {
   setCurrentTab: (tab: string) => void;
   activeBidCount: number;
   wishlistCount: number;
+  cartCount?: number;
+  onOpenCart?: () => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   userEmail: string;
@@ -36,12 +38,13 @@ const SUGGESTIONS = [
 const NAV_TABS = [
   { id: "browse",  label: "Shop",      icon: Shirt },
   { id: "markets", label: "Sellers",   icon: Store },
-  { id: "closet",  label: "My Orders", icon: Package },
+  { id: "orders",  label: "My Orders", icon: Package },
 ];
 
 export default function Navbar({
   currentTab, setCurrentTab,
   activeBidCount, wishlistCount,
+  cartCount = 0, onOpenCart,
   searchQuery, setSearchQuery,
   userEmail, setUserEmail,
   userPhone = "", userName = "",
@@ -185,6 +188,22 @@ export default function Navbar({
               title={isDarkMode ? "Light mode" : "Dark mode"}
             >
               {isDarkMode ? <Sun className="w-5 h-5 text-amber-500" /> : <Moon className="w-5 h-5" />}
+            </button>
+          )}
+
+          {/* Cart button */}
+          {onOpenCart && (
+            <button
+              onClick={onOpenCart}
+              className="relative p-2 rounded-lg text-stone-600 hover:bg-stone-100 transition-colors"
+              aria-label="Cart"
+            >
+              <ShoppingBag className="w-5 h-5" />
+              {cartCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none" style={{ background: "linear-gradient(135deg, #667eea, #764ba2)" }}>
+                  {cartCount > 9 ? "9+" : cartCount}
+                </span>
+              )}
             </button>
           )}
 
@@ -365,13 +384,22 @@ export default function Navbar({
                 key={id}
                 onClick={() => { setCurrentTab(id); setMobileMenuOpen(false); }}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  currentTab === id ? "bg-brand/10 text-brand" : "text-stone-700 hover:bg-stone-50"
+                  currentTab === id ? "text-[#667eea] bg-indigo-50" : "text-stone-700 hover:bg-stone-50"
                 }`}
               >
                 <Icon className="w-4 h-4" />
                 {label}
               </button>
             ))}
+            {onOpenCart && (
+              <button
+                onClick={() => { onOpenCart(); setMobileMenuOpen(false); }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-stone-700 hover:bg-stone-50"
+              >
+                <ShoppingBag className="w-4 h-4" />
+                Cart {cartCount > 0 && <span className="ml-auto text-xs font-bold text-[#667eea]">{cartCount}</span>}
+              </button>
+            )}
             {isGuest && (
               <button
                 onClick={() => { onOpenAuthModal?.(); setMobileMenuOpen(false); }}

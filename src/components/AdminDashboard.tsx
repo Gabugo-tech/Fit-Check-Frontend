@@ -50,6 +50,8 @@ export default function AdminDashboard({
   const [editingSellerId, setEditingSellerId] = useState<string | null>(null);
   const [deletingSellerId, setDeletingSellerId] = useState<string | null>(null);
   const [sellerDeleteLoading, setSellerDeleteLoading] = useState(false);
+  const [sellerAvatarUploading, setSellerAvatarUploading] = useState(false);
+  const [sellerBannerUploading, setSellerBannerUploading] = useState(false);
 
   const showAdminToast = (msg: string) => {
     setAdminToast(msg);
@@ -195,26 +197,48 @@ export default function AdminDashboard({
     };
 
     setListingSaving(true);
+    
+    // ── Optimistic UI: show item immediately ──────────────────────────────
+    const optimisticItem = {
+      id: `optimistic-${Date.now()}`,
+      title: payload.title,
+      description: payload.description,
+      category: payload.category,
+      era: payload.era,
+      condition: payload.condition,
+      size: payload.size,
+      sellerId:     payload.sellerId,
+      sellerName:   payload.sellerName,
+      sellerAvatar: payload.sellerAvatar,
+      marketName:   payload.marketName,
+      imageUrl:     payload.imageUrl,
+      startingBid:  starting,
+      currentBid:   starting,
+      buyPrice:     starting,
+      bidsCount: 0, highestBidder: null, isSold: false,
+      biddingEndsAt: payload.biddingEndsAt,
+      tags: payload.tags,
+      measurements: {}, materials: [], history: "",
+      bidDropped: false, bidDroppedReason: "",
+    } as any;
+    setItems(prev => [optimisticItem, ...prev]);
+    setPreviewAddTitle("");
+    setUploadedImageUrl("");
+    setUploadError("");
+    showAdminToast(`⏳ Saving "${optimisticItem.title}" to database…`);
+
     try {
-      // Save to DB so every customer sees it
+      // Save to DB in background
       const { itemsApi, mapDbItem } = await import("../lib/api");
       const saved = await itemsApi.create(payload);
       const mapped = mapDbItem(saved);
-      const updated = [mapped as any, ...items];
-      setItems(updated);
-      setPreviewAddTitle("");
-      setUploadedImageUrl("");
-      setUploadError("");
-      showAdminToast(`✅ "${mapped.title}" listed and saved to database!`);
+      // Replace optimistic item with real DB record
+      setItems(prev => prev.map(i => i.id === optimisticItem.id ? { ...i, ...mapped, id: mapped.id } : i));
+      showAdminToast(`✅ "${mapped.title}" saved to database!`);
     } catch (err: any) {
-      // Fallback to local if API fails
-      showAdminToast(`⚠ DB save failed (${err.message}) — item added locally only.`);
-      const localItem = {
-        id: `item-${Date.now()}`, ...payload,
-        currentBid: starting, bidsCount: 0, highestBidder: null, isSold: false,
-        measurements: {}, materials: [], history: "", bidDropped: false, bidDroppedReason: "",
-      } as any;
-      setItems(prev => [localItem, ...prev]);
+      // Remove optimistic item on failure
+      setItems(prev => prev.filter(i => i.id !== optimisticItem.id));
+      showAdminToast(`❌ Failed to save: ${err.message}`);
     } finally {
       setListingSaving(false);
     }
@@ -285,6 +309,24 @@ export default function AdminDashboard({
 
   const handleDragLeave = () => {
     setIsDragging(false);
+  };
+
+  // Upload seller avatar or banner image
+  const handleSellerImageUpload = async (
+    field: "avatar" | "bannerImage",
+    file: File
+  ) => {
+    if (!file.type.startsWith("image/")) return;
+    if (file.size > 8 * 1024 * 1024) { showAdminToast("Image too large (max 8MB)"); return; }
+    field === "avatar" ? setSellerAvatarUploading(true) : setSellerBannerUploading(true);
+    try {
+      const url = await uploadToCloudinary(file);
+      setSellerForm(p => ({ ...p, [field]: url }));
+    } catch (err: any) {
+      showAdminToast(`Upload failed: ${err.message}`);
+    } finally {
+      field === "avatar" ? setSellerAvatarUploading(false) : setSellerBannerUploading(false);
+    }
   };
 
   const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
@@ -507,8 +549,6 @@ export default function AdminDashboard({
                 { label: "Tagline",                key: "tagline",   placeholder: "e.g. London's premier crate of 70s rebellion" },
                 { label: "Aesthetic / Style",      key: "aesthetic", placeholder: "e.g. 70s Rock & Y2K Tech" },
                 { label: "Established",            key: "established", placeholder: "e.g. Est. 2011" },
-                { label: "Avatar Image URL",       key: "avatar",    placeholder: "https://..." },
-                { label: "Banner Image URL",       key: "bannerImage", placeholder: "https://..." },
               ].map(({ label, key, placeholder }) => (
                 <div key={key}>
                   <label className="block text-xs font-medium text-stone-600 mb-1">{label}</label>
@@ -521,6 +561,34 @@ export default function AdminDashboard({
                   />
                 </div>
               ))}
+
+              {/* Avatar upload */}
+              <div>
+                <label className="block text-xs font-medium text-stone-600 mb-1">Profile Photo</label>
+                <div className="flex items-center gap-3">
+                  {sellerForm.avatar ? (
+                    <img src={sellerForm.avatar} alt="avatar" className="w-10 h-10 rounded-full object-cover border border-stone-200" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-stone-100 border border-stone-200 flex items-center justify-center text-stone-400 text-lg">👤</div>
+                  )}
+                  <label className="flex items-center gap-2 px-3 py-1.5 border border-stone-200 rounded-lg text-xs font-medium text-stone-600 hover:bg-stone-50 cursor-pointer transition-colors">
+                    <input type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleSellerImageUpload("avatar", f); }} />
+                    {sellerAvatarUploading ? <><Loader2 className="w-3 h-3 animate-spin" />Uploading…</> : "Upload photo"}
+                  </label>
+                </div>
+              </div>
+
+              {/* Banner upload */}
+              <div>
+                <label className="block text-xs font-medium text-stone-600 mb-1">Banner Image</label>
+                {sellerForm.bannerImage && (
+                  <img src={sellerForm.bannerImage} alt="banner" className="w-full h-16 object-cover rounded-lg mb-2 border border-stone-200" />
+                )}
+                <label className="flex items-center gap-2 px-3 py-1.5 border border-stone-200 rounded-lg text-xs font-medium text-stone-600 hover:bg-stone-50 cursor-pointer transition-colors w-fit">
+                  <input type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleSellerImageUpload("bannerImage", f); }} />
+                  {sellerBannerUploading ? <><Loader2 className="w-3 h-3 animate-spin" />Uploading…</> : "Upload banner"}
+                </label>
+              </div>
 
               <div>
                 <label className="block text-xs font-medium text-stone-600 mb-1">Bio</label>
