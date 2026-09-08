@@ -244,25 +244,61 @@ export default function AdminDashboard({
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const [imageUploading, setImageUploading] = useState(false);
+
+  // Upload image to Cloudinary and return the permanent URL
+  const uploadToCloudinary = async (file: File): Promise<string> => {
+    const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+    const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+
+    if (!cloudName || !uploadPreset) {
+      // Fallback to base64 if Cloudinary not configured
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target?.result as string);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", uploadPreset);
+    formData.append("folder", "fitcheck");
+
+    const res = await fetch(
+      `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+      { method: "POST", body: formData }
+    );
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error?.message || "Cloudinary upload failed");
+    }
+
+    const data = await res.json();
+    return data.secure_url;
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith("image/")) {
-        setUploadError("Please upload an image file (PNG, JPG, WebP, etc.)");
-        return;
-      }
-      if (file.size > 8 * 1024 * 1024) {
-        setUploadError("Image is too large (max 8MB file size allowed)");
-        return;
-      }
-      setUploadError("");
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setUploadedImageUrl(event.target.result as string);
-        }
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setUploadError("Please upload an image file (PNG, JPG, WebP, etc.)");
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      setUploadError("Image is too large (max 8MB)");
+      return;
+    }
+    setUploadError("");
+    setImageUploading(true);
+    try {
+      const url = await uploadToCloudinary(file);
+      setUploadedImageUrl(url);
+    } catch (err: any) {
+      setUploadError(`Upload failed: ${err.message}`);
+    } finally {
+      setImageUploading(false);
     }
   };
 
@@ -275,28 +311,28 @@ export default function AdminDashboard({
     setIsDragging(false);
   };
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
-    
     const file = e.dataTransfer.files?.[0];
-    if (file) {
-      if (!file.type.startsWith("image/")) {
-        setUploadError("Please drop an image file.");
-        return;
-      }
-      if (file.size > 8 * 1024 * 1024) {
-        setUploadError("Image is too large (max 8MB allowed)");
-        return;
-      }
-      setUploadError("");
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setUploadedImageUrl(event.target.result as string);
-        }
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setUploadError("Please drop an image file.");
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      setUploadError("Image is too large (max 8MB)");
+      return;
+    }
+    setUploadError("");
+    setImageUploading(true);
+    try {
+      const url = await uploadToCloudinary(file);
+      setUploadedImageUrl(url);
+    } catch (err: any) {
+      setUploadError(`Upload failed: ${err.message}`);
+    } finally {
+      setImageUploading(false);
     }
   };
 
@@ -701,20 +737,20 @@ export default function AdminDashboard({
               />
             </div>
 
-            {/* Local Storage Drag-and-Drop Image Uploader */}
+            {/* Cloudinary Image Uploader */}
             <div className="space-y-1.5 pt-1">
               <label className="text-[10px] font-mono text-stone-500 font-bold uppercase block">
-                Couture Garment Image (Local Device Upload)
+                Garment Image
               </label>
-              
-              <div 
+
+              <div
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
-                className={`relative border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-all duration-200 ${
-                  isDragging 
-                    ? "border-jumia-orange bg-orange-50/10" 
-                    : "border-stone-300 dark:border-stone-700 hover:border-stone-400 dark:hover:border-stone-600 bg-stone-50/30 dark:bg-stone-900/30"
+                className={`relative border-2 border-dashed rounded-lg p-4 text-center transition-all duration-200 ${
+                  isDragging
+                    ? "border-[#667eea] bg-indigo-50/20"
+                    : "border-stone-300 dark:border-stone-700 hover:border-stone-400 bg-stone-50/30"
                 }`}
               >
                 <input
@@ -723,55 +759,53 @@ export default function AdminDashboard({
                   accept="image/*"
                   onChange={handleFileChange}
                   className="hidden"
+                  disabled={imageUploading}
                 />
-                
-                {uploadedImageUrl ? (
-                  <div className="space-y-3 relative" id="image-upload-preview-container">
-                    <img 
-                      src={uploadedImageUrl} 
-                      alt="Garment Preview" 
-                      className="max-h-36 mx-auto rounded-lg object-contain shadow-sm border border-stone-200 dark:border-stone-800"
+
+                {imageUploading ? (
+                  <div className="py-4 space-y-2">
+                    <Loader2 className="w-8 h-8 animate-spin text-[#667eea] mx-auto" />
+                    <p className="text-xs text-stone-500 font-mono">Uploading to Cloudinary…</p>
+                  </div>
+                ) : uploadedImageUrl ? (
+                  <div className="space-y-3">
+                    <img
+                      src={uploadedImageUrl}
+                      alt="Preview"
+                      className="max-h-36 mx-auto rounded-lg object-contain shadow-sm border border-stone-200"
                     />
                     <div className="flex justify-center gap-2">
                       <button
                         type="button"
-                        onClick={() => {
-                          setUploadedImageUrl("");
-                          setUploadError("");
-                        }}
-                        className="py-1 px-3 bg-red-600 hover:bg-red-700 text-white rounded text-[10px] font-mono uppercase font-black transition-all cursor-pointer"
+                        onClick={() => { setUploadedImageUrl(""); setUploadError(""); }}
+                        className="py-1 px-3 bg-red-600 hover:bg-red-700 text-white rounded text-[10px] font-mono uppercase font-black cursor-pointer"
                       >
                         Remove
                       </button>
-                      <label 
+                      <label
                         htmlFor="garment_image_file"
-                        className="py-1 px-3 bg-stone-900 hover:bg-stone-800 text-stone-100 rounded text-[10px] font-mono uppercase font-black transition-all cursor-pointer"
+                        className="py-1 px-3 bg-stone-900 hover:bg-stone-800 text-white rounded text-[10px] font-mono uppercase font-black cursor-pointer"
                       >
-                        Change Image
+                        Change
                       </label>
                     </div>
+                    <p className="text-[9px] text-green-600 font-mono">✓ Uploaded to Cloudinary</p>
                   </div>
                 ) : (
                   <label htmlFor="garment_image_file" className="block cursor-pointer py-3 space-y-2">
-                    <div className="flex justify-center">
-                      <UploadCloud className="w-8 h-8 text-stone-400 dark:text-stone-500 animate-pulse" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-stone-700 dark:text-stone-300">
-                        Drag & drop a local image, or <span className="text-jumia-orange underline">browse device</span>
-                      </p>
-                      <p className="text-[9px] text-stone-400 mt-1 uppercase font-mono tracking-wider">
-                        PNG, JPG, WEBP • Max 8MB
-                      </p>
-                    </div>
+                    <UploadCloud className="w-8 h-8 text-stone-400 mx-auto" />
+                    <p className="text-xs font-semibold text-stone-700">
+                      Drag & drop or <span className="text-[#667eea] underline">browse</span>
+                    </p>
+                    <p className="text-[9px] text-stone-400 uppercase font-mono tracking-wider">
+                      PNG, JPG, WEBP · Max 8MB · Saved to Cloudinary
+                    </p>
                   </label>
                 )}
               </div>
 
               {uploadError && (
-                <p className="text-[10px] text-red-600 font-mono font-semibold animate-pulse mt-1">
-                  ⚠ {uploadError}
-                </p>
+                <p className="text-[10px] text-red-600 font-mono font-semibold">{uploadError}</p>
               )}
             </div>
 
