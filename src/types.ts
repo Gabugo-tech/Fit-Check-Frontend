@@ -21,6 +21,7 @@ export interface VintageItem {
   tags: string[];
   bidDropped?: boolean;
   bidDroppedReason?: string;
+  quantity?: number;
   measurements?: {
     pitToPit?: string;
     length?: string;

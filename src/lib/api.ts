@@ -216,6 +216,15 @@ export const sellersApi = {
 
   delete: (id: string) =>
     request<{ ok: boolean }>(`/sellers?id=${id}`, { method: "DELETE" }),
+
+  applyAsSeller: (data: { name: string; email: string; whatsapp: string; bio?: string; location?: string }) =>
+    request<any>("/sellers?action=apply", { method: "POST", body: JSON.stringify(data) }),
+
+  getApplications: () =>
+    request<any[]>("/sellers?action=applications"),
+
+  updateApplication: (id: string, status: "pending" | "approved" | "rejected") =>
+    request<any>(`/sellers?action=application&id=${id}`, { method: "PATCH", body: JSON.stringify({ status }) }),
 };
 
 // ─── DB to Frontend type mapper ───────────────────────────────────────────────
@@ -243,7 +252,7 @@ export function mapDbItem(row: any) {
     era: row.era || "Vintage",
     condition: row.condition || "Good",
     size: row.size || "M",
-    sellerId: row.seller_id || "booth-1",
+    sellerId: row.seller_id || "",
     sellerName: row.seller_name || "FitCheck",
     sellerAvatar: row.seller_avatar || "",
     marketName: row.market_name || "",
@@ -261,6 +270,7 @@ export function mapDbItem(row: any) {
     measurements: row.measurements || {},
     materials: row.materials || [],
     history: row.history || "",
+    quantity: Number(row.quantity ?? 1),
   };
 }
 

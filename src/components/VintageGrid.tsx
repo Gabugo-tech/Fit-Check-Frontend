@@ -11,6 +11,8 @@ interface VintageGridProps {
   wishlist?: string[];
   onToggleWishlist?: (itemId: string) => void;
   isWishlistView?: boolean;
+  isGuest?: boolean;
+  onAuthRequired?: () => void;
 }
 
 const CATEGORIES = ["All", "Outerwear", "Tops", "Bottoms", "Dresses"];
@@ -41,6 +43,8 @@ export default function VintageGrid({
   selectedBoothId, clearBoothFilter,
   wishlist = [], onToggleWishlist,
   isWishlistView = false,
+  isGuest = false,
+  onAuthRequired,
 }: VintageGridProps) {
   const [category, setCategory]   = useState("All");
   const [era, setEra]             = useState("All");
@@ -225,7 +229,7 @@ export default function VintageGrid({
               item={item}
               onSelect={() => onSelectItem(item)}
               inWishlist={wishlist.includes(item.id)}
-              onToggleWishlist={onToggleWishlist}
+              onToggleWishlist={isGuest ? onAuthRequired : onToggleWishlist}
             />
           ))}
         </AnimatePresence>
@@ -241,7 +245,7 @@ function ProductCard({
   item: VintageItem;
   onSelect: () => void;
   inWishlist: boolean;
-  onToggleWishlist?: (id: string) => void;
+  onToggleWishlist?: ((id: string) => void) | (() => void);
 }) {
   const countdown = getCountdown(item.biddingEndsAt);
   const endingSoon = isEndingSoon(item.biddingEndsAt);
@@ -292,7 +296,7 @@ function ProductCard({
 
         {/* Wishlist */}
         <button
-          onClick={e => { e.stopPropagation(); onToggleWishlist?.(item.id); }}
+          onClick={e => { e.stopPropagation(); onToggleWishlist ? (onToggleWishlist as any)(item.id) : undefined; }}
           className={`absolute top-2.5 right-2.5 w-8 h-8 rounded-full flex items-center justify-center shadow-sm border transition-colors ${
             inWishlist
               ? "bg-rose-50 border-rose-200 text-rose-500"
